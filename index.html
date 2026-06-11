@@ -81,9 +81,8 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyYADts7aB3-Oq72MeHptMWrM7OjSk-T9CnUxkPqy7Eo7PT68L8lUd_pdAsjynxigeymw/exec';
 
 const DEVICES = {
-  seongsu_hyungwan: { name: '현관 에어컨', sub: '에브리아워 성수점', key: '현관', winds: ['LOW','MID','HIGH'] },
-  seongsu_tongchang: { name: '통창 에어컨', sub: '에브리아워 성수점', key: '통창', winds: ['LOW','MID','HIGH'] },
-  guui: { name: '구의 에어컨', sub: '에브리아워 구의점', key: '구의', winds: ['LOW','MID','HIGH'] }
+  seongsu: { name: '성수점 에어컨', sub: '현관 + 통창 2대', key: '현관', key2: '통창', winds: ['LOW','MID','HIGH'] },
+  guui: { name: '구의점 에어컨', sub: '에브리아워 구의점', key: '구의', winds: ['LOW','MID','HIGH'] }
 };
 
 const WIND_LABELS = { LOW: '약풍', MID: '중풍', HIGH: '강풍' };
