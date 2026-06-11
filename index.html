@@ -118,13 +118,10 @@ async function loadStatus() {
 function renderAll() {
   const html = `
     <div class="section">
-      <div class="section-title">성수점</div>
-      ${renderDevice('seongsu_hyungwan')}
-      ${renderDevice('seongsu_tongchang')}
+      ${renderDevice('seongsu')}
       ${renderManualControl('seongsu', '성수점 자동화 제어')}
     </div>
     <div class="section">
-      <div class="section-title">구의점</div>
       ${renderDevice('guui')}
       ${renderManualControl('guui', '구의점 자동화 제어')}
     </div>
