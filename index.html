@@ -132,7 +132,7 @@ function renderAll() {
 
 function renderDevice(id) {
   const d = DEVICES[id];
-  const s = status[id] || {};
+  const s = id === 'seongsu' ? (status.seongsu_hyungwan || {}) : (status[id] || {});
   const isOn = s.power === 'POWER_ON';
   const seats = id === 'guui' ? status.guui_seats : status.seongsu_seats;
 
