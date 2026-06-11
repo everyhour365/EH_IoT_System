@@ -5,17 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="에브리아워">
+<meta name="apple-mobile-web-app-title" content="EH IoT System">
 <title>EH IoT System</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; min-height: 100vh; }
   .header { background: #fff; padding: 16px 20px 12px; border-bottom: 0.5px solid #e0e0e0; position: sticky; top: 0; z-index: 10; }
   .header h1 { font-size: 20px; font-weight: 600; color: #1c1c1e; }
-  .header .subtitle { font-size: 13px; color: #8e8e93; margin-top: 2px; }
   .last-update { font-size: 12px; color: #8e8e93; margin-top: 4px; }
   .section { padding: 16px 16px 0; }
-  .section-title { font-size: 13px; font-weight: 600; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; padding: 0 4px; }
   .card { background: #fff; border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
   .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid #f2f2f7; }
   .device-name { font-size: 17px; font-weight: 600; color: #1c1c1e; }
@@ -24,7 +22,7 @@
   .power-btn.on { background: #34c759; color: #fff; }
   .power-btn.off { background: #e5e5ea; color: #8e8e93; }
   .power-btn:active { transform: scale(0.93); }
-  .stats-row { display: flex; padding: 12px 16px; gap: 0; }
+  .stats-row { display: flex; padding: 12px 16px; }
   .stat { flex: 1; text-align: center; }
   .stat-label { font-size: 11px; color: #8e8e93; margin-bottom: 4px; }
   .stat-value { font-size: 22px; font-weight: 600; color: #1c1c1e; }
@@ -53,14 +51,11 @@
   .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
   .status-on { background: #e8fbe8; color: #1a8c2e; }
   .status-off { background: #f2f2f7; color: #8e8e93; }
-  .seats-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 0.5px solid #f2f2f7; }
-  .seats-label { font-size: 13px; color: #8e8e93; }
-  .seats-value { font-size: 13px; font-weight: 600; color: #1c1c1e; }
   .refresh-btn { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: #007aff; color: #fff; border: none; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.35); transition: all 0.2s; }
   .refresh-btn:active { transform: scale(0.93); }
   .loading { text-align: center; padding: 40px; color: #8e8e93; font-size: 15px; }
   .error { background: #fff0f0; color: #ff3b30; padding: 12px 16px; border-radius: 12px; margin: 16px; font-size: 14px; }
-  .spinning { animation: spin 1s linear infinite; }
+  .spinning { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
@@ -81,15 +76,15 @@
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyYADts7aB3-Oq72MeHptMWrM7OjSk-T9CnUxkPqy7Eo7PT68L8lUd_pdAsjynxigeymw/exec';
 
 const DEVICES = {
-  seongsu: { name: '성수점 에어컨', sub: '현관 + 통창 2대', key: '현관', key2: '통창', winds: ['LOW','MID','HIGH'] },
-  guui: { name: '구의점 에어컨', sub: '에브리아워 구의점', key: '구의', winds: ['LOW','MID','HIGH'] }
+  seongsu: { name: '성수점 에어컨', sub: '현관 + 통창 2대', key: '현관', key2: '통창', winds: ['LOW','MID','HIGH'], tempStep: 1 },
+  guui:    { name: '구의점 에어컨', sub: '에브리아워 구의점', key: '구의', winds: ['LOW','MID','HIGH'], tempStep: 0.5 }
 };
 
 const WIND_LABELS = { LOW: '약풍', MID: '중풍', HIGH: '강풍' };
-const MANUAL_LABELS = { AUTO: '자동', ON: '강제ON', OFF: '강제OFF' };
 
 let status = {};
 let manualControls = { seongsu: 'AUTO', guui: 'AUTO' };
+let tempCache = {};
 
 async function api(payload) {
   const res = await fetch(GAS_URL, {
@@ -101,18 +96,18 @@ async function api(payload) {
 
 async function loadStatus() {
   const btn = document.getElementById('refreshBtn');
-  btn.style.transform = 'rotate(0deg)';
-  btn.classList.add('spinning');
+  btn.innerHTML = '<span class="spinning">↻</span>';
   try {
     const data = await api({ action: 'getStatus' });
     status = data;
     manualControls = data.manualControls || { seongsu: 'AUTO', guui: 'AUTO' };
+    tempCache = {};
     renderAll();
     document.getElementById('lastUpdate').textContent = '업데이트: ' + new Date().toLocaleTimeString('ko-KR');
   } catch(e) {
     document.getElementById('content').innerHTML = '<div class="error">⚠️ 불러오기 실패. 새로고침 해주세요.</div>';
   }
-  btn.classList.remove('spinning');
+  btn.innerHTML = '↻';
 }
 
 function renderAll() {
@@ -135,6 +130,7 @@ function renderDevice(id) {
   const s = id === 'seongsu' ? (status.seongsu_hyungwan || {}) : (status[id] || {});
   const isOn = s.power === 'POWER_ON';
   const seats = id === 'guui' ? status.guui_seats : status.seongsu_seats;
+  const currentTargetTemp = tempCache[id] ?? s.targetTemp;
 
   return `
   <div class="card">
@@ -147,7 +143,7 @@ function renderDevice(id) {
           </span>
         </div>
       </div>
-      <button class="power-btn ${isOn ? 'on' : 'off'}" onclick="togglePower('${id}', ${!isOn})" title="전원">⏻</button>
+      <button class="power-btn ${isOn ? 'on' : 'off'}" onclick="togglePower('${id}', ${!isOn})">⏻</button>
     </div>
     <div class="stats-row">
       <div class="stat">
@@ -156,7 +152,7 @@ function renderDevice(id) {
       </div>
       <div class="stat">
         <div class="stat-label">설정온도</div>
-        <div class="stat-value">${s.targetTemp ?? '--'}<span class="stat-unit">°C</span></div>
+        <div class="stat-value">${currentTargetTemp ?? '--'}<span class="stat-unit">°C</span></div>
       </div>
       <div class="stat">
         <div class="stat-label">좌석</div>
@@ -167,9 +163,9 @@ function renderDevice(id) {
     <div class="temp-control">
       <div class="temp-label">희망온도</div>
       <div class="temp-btns">
-        <button class="temp-btn" onclick="changeTemp('${id}', -0.5)">−</button>
-        <div class="temp-display" id="temp-${id}">${s.targetTemp ?? '--'}°C</div>
-        <button class="temp-btn" onclick="changeTemp('${id}', 0.5)">+</button>
+        <button class="temp-btn" onclick="changeTemp('${id}', -1)">−</button>
+        <div class="temp-display" id="temp-${id}">${currentTargetTemp ?? '--'}°C</div>
+        <button class="temp-btn" onclick="changeTemp('${id}', 1)">+</button>
       </div>
     </div>
     <div class="wind-control">
@@ -200,20 +196,22 @@ async function togglePower(id, on) {
   const d = DEVICES[id];
   try {
     await api({ action: 'control', device: d.key, power: on });
+    if (d.key2) await api({ action: 'control', device: d.key2, power: on });
     await loadStatus();
   } catch(e) { alert('제어 실패'); }
 }
 
-let tempCache = {};
 async function changeTemp(id, delta) {
   const d = DEVICES[id];
-  const current = tempCache[id] ?? status[id]?.targetTemp ?? 25;
-  const newTemp = Math.round((current + delta) * 10) / 10;
+  const s = id === 'seongsu' ? (status.seongsu_hyungwan || {}) : (status[id] || {});
+  const current = tempCache[id] ?? s.targetTemp ?? 25;
+  const newTemp = Math.round((current + delta * d.tempStep) * 10) / 10;
   if (newTemp < 18 || newTemp > 30) return;
   tempCache[id] = newTemp;
   document.getElementById('temp-' + id).textContent = newTemp + '°C';
   try {
     await api({ action: 'control', device: d.key, temp: newTemp });
+    if (d.key2) await api({ action: 'control', device: d.key2, temp: newTemp });
   } catch(e) { alert('온도 변경 실패'); }
 }
 
@@ -221,6 +219,7 @@ async function changeWind(id, wind) {
   const d = DEVICES[id];
   try {
     await api({ action: 'control', device: d.key, windStrength: wind });
+    if (d.key2) await api({ action: 'control', device: d.key2, windStrength: wind });
     await loadStatus();
   } catch(e) { alert('바람 변경 실패'); }
 }
