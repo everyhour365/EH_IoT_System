@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EH IoT System">
 <title>EH IoT System</title>
@@ -14,8 +15,7 @@
   .header h1 { font-size: 20px; font-weight: 600; color: #1c1c1e; }
   .last-update { font-size: 12px; color: #8e8e93; margin-top: 4px; }
   .section { padding: 16px 16px 0; }
-  .section:first-child .card:first-child { margin-bottom: 8px; }
-  .card { background: #fff; border-radius: 16px; overflow: hidden; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
   .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid #f2f2f7; }
   .device-name { font-size: 17px; font-weight: 600; color: #1c1c1e; }
   .device-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
@@ -41,7 +41,7 @@
   .wind-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e0e0e0; background: #fff; font-size: 13px; color: #8e8e93; cursor: pointer; transition: all 0.15s; }
   .wind-btn.active { border-color: #007aff; color: #007aff; background: #e8f0fe; }
   .wind-btn:active { transform: scale(0.95); }
-  .manual-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 0.5px solid #f2f2f7; }
+  .manual-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
   .manual-label { font-size: 13px; color: #8e8e93; }
   .manual-btns { display: flex; gap: 8px; }
   .manual-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e0e0e0; background: #fff; font-size: 13px; color: #8e8e93; cursor: pointer; transition: all 0.15s; }
@@ -132,9 +132,12 @@ function renderDevice(id) {
   const isOn = s.power === 'POWER_ON';
   const seats = id === 'guui' ? status.guui_seats : status.seongsu_seats;
   const currentTargetTemp = tempCache[id] ?? s.targetTemp;
+  const seatTotal = seats?.total ?? 0;
+  const seatCap = id === 'guui' ? 24 : 26;
+  const longStay = seats?.longStay ?? 0;
 
- return `
-  <div class="card" style="margin-bottom: 8px;">
+  return `
+  <div class="card" style="margin-bottom: 2px;">
     <div class="device-header">
       <div>
         <div class="device-name">${d.name}</div>
@@ -157,8 +160,7 @@ function renderDevice(id) {
       </div>
       <div class="stat">
         <div class="stat-label">좌석</div>
-        <div class="stat-value">${seats?.total ?? '--'}<span class="stat-unit">/${id === 'guui' ? 24 : 26}</span></div>
-        ${seats?.longStay > 0 ? `<div style="font-size: 11px; color: #ff9500; margin-top: 2px;">10h↑ (${seats.longStay}명)</div>` : ''}
+        <div class="stat-value">${seatTotal}<span class="stat-unit">/${seatCap}</span>${longStay > 0 ? `<span style="font-size: 13px; color: #ff9500; margin-left: 4px;">(${longStay}명)</span>` : ''}</div>
       </div>
     </div>
     ${isOn ? `
@@ -182,7 +184,7 @@ function renderDevice(id) {
 function renderManualControl(site, label) {
   const current = manualControls[site] || 'AUTO';
   return `
-  <div class="card" style="margin-top: -8px; margin-bottom: 12px;">
+  <div class="card" style="margin-top: 2px; margin-bottom: 12px;">
     <div class="manual-row">
       <div class="manual-label">${label}</div>
       <div class="manual-btns">
