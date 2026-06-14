@@ -133,8 +133,8 @@ function renderDevice(id) {
   const seats = id === 'guui' ? status.guui_seats : status.seongsu_seats;
   const currentTargetTemp = tempCache[id] ?? s.targetTemp;
 
-  return `
-  <div class="card">
+ return `
+  <div class="card" style="margin-bottom: 8px;">
     <div class="device-header">
       <div>
         <div class="device-name">${d.name}</div>
