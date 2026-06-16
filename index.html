@@ -10,15 +10,16 @@
 <title>EH IoT System</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; min-height: 100vh; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; min-height: 100vh; overscroll-behavior-y: contain; }
   .header { background: #fff; padding: 16px 20px 12px; border-bottom: 0.5px solid #e0e0e0; position: sticky; top: 0; z-index: 10; }
   .header h1 { font-size: 20px; font-weight: 600; color: #1c1c1e; }
   .last-update { font-size: 12px; color: #8e8e93; margin-top: 4px; }
+  .pull-indicator { text-align: center; padding: 0; height: 0; overflow: hidden; color: #8e8e93; font-size: 13px; transition: height 0.2s, padding 0.2s; }
+  .pull-indicator.visible { height: 40px; padding: 12px 0; }
   .section { padding: 16px 16px 0; }
   .card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
   .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid #f2f2f7; }
   .device-name { font-size: 17px; font-weight: 600; color: #1c1c1e; }
-  .device-sub { font-size: 13px; color: #8e8e93; margin-top: 2px; }
   .power-btn { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 20px; }
   .power-btn.on { background: #34c759; color: #fff; }
   .power-btn.off { background: #e5e5ea; color: #8e8e93; }
@@ -54,71 +55,94 @@
   .status-off { background: #f2f2f7; color: #8e8e93; }
   .refresh-btn { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: #007aff; color: #fff; border: none; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.35); transition: all 0.2s; }
   .refresh-btn:active { transform: scale(0.93); }
-  .loading { text-align: center; padding: 40px; color: #8e8e93; font-size: 15px; }
-  .error { background: #fff0f0; color: #ff3b30; padding: 12px 16px; border-radius: 12px; margin: 16px; font-size: 14px; }
+  .stale { opacity: 0.6; }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
+<div class="pull-indicator" id="pullIndicator">↓ 당겨서 새로고침</div>
+
 <div class="header">
   <h1>🌡️ EH IoT System</h1>
   <div class="last-update" id="lastUpdate">불러오는 중...</div>
 </div>
 
-<div id="content">
-  <div class="loading">⏳ 상태 불러오는 중...</div>
-</div>
+<div id="content"></div>
 
 <button class="refresh-btn" onclick="loadStatus()" id="refreshBtn" title="새로고침">↻</button>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyPfzjjvV6-6WL1UdBzrfzRRmqdYOwpu0M4oo6zU0Hqtsee18NCbABCybxdfHXnI8SAsQ/exec';
+const CACHE_KEY = 'eh_iot_cache';
 
 const DEVICES = {
   seongsu: { name: '성수점 에어컨', sub: '현관 + 통창 2대', key: '현관', key2: '통창', winds: ['LOW','MID','HIGH'], tempStep: 1 },
   guui:    { name: '구의점 에어컨', sub: '에브리아워 구의점', key: '구의', winds: ['LOW','MID','HIGH'], tempStep: 0.5 }
 };
-
 const WIND_LABELS = { LOW: '약풍', MID: '중풍', HIGH: '강풍' };
 
 let status = {};
 let manualControls = { seongsu: 'AUTO', guui: 'AUTO' };
 let tempCache = {};
+let isLoading = false;
 
 async function api(payload) {
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
+  const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
   return res.json();
 }
 
-async function loadStatus() {
+async function loadStatus(showStale = false) {
+  if (isLoading) return;
+  isLoading = true;
+
   const btn = document.getElementById('refreshBtn');
   btn.innerHTML = '<span class="spinning">↻</span>';
+
+  // 캐시된 데이터 먼저 보여주기
+  if (showStale) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, time } = JSON.parse(cached);
+        status = data;
+        manualControls = data.manualControls || { seongsu: 'AUTO', guui: 'AUTO' };
+        renderAll(true);
+        document.getElementById('lastUpdate').textContent = '캐시: ' + new Date(time).toLocaleTimeString('ko-KR') + ' (업데이트 중...)';
+      }
+    } catch(e) {}
+  }
+
   try {
     const data = await api({ action: 'getStatus' });
     status = data;
     manualControls = data.manualControls || { seongsu: 'AUTO', guui: 'AUTO' };
     tempCache = {};
-    renderAll();
+
+    // 캐시 저장
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, time: Date.now() }));
+    } catch(e) {}
+
+    renderAll(false);
     document.getElementById('lastUpdate').textContent = '업데이트: ' + new Date().toLocaleTimeString('ko-KR');
   } catch(e) {
-    document.getElementById('content').innerHTML = '<div class="error">⚠️ 불러오기 실패. 새로고침 해주세요.</div>';
+    document.getElementById('lastUpdate').textContent = '❌ 불러오기 실패';
   }
+
   btn.innerHTML = '↻';
+  isLoading = false;
 }
 
-function renderAll() {
+function renderAll(stale = false) {
   const html = `
     <div class="section">
-      ${renderDevice('seongsu')}
+      ${renderDevice('seongsu', stale)}
       ${renderManualControl('seongsu', '성수점 자동화 제어')}
     </div>
     <div class="section">
-      ${renderDevice('guui')}
+      ${renderDevice('guui', stale)}
       ${renderManualControl('guui', '구의점 자동화 제어')}
     </div>
     <div style="height: 80px;"></div>
@@ -126,7 +150,7 @@ function renderAll() {
   document.getElementById('content').innerHTML = html;
 }
 
-function renderDevice(id) {
+function renderDevice(id, stale = false) {
   const d = DEVICES[id];
   const s = id === 'seongsu' ? (status.seongsu_hyungwan || {}) : (status[id] || {});
   const isOn = s.power === 'POWER_ON';
@@ -137,7 +161,7 @@ function renderDevice(id) {
   const longStay = seats?.longStay ?? 0;
 
   return `
-  <div class="card" style="margin-bottom: 6px;">
+  <div class="card${stale ? ' stale' : ''}" style="margin-bottom: 2px;">
     <div class="device-header">
       <div>
         <div class="device-name">${d.name}</div>
@@ -184,7 +208,7 @@ function renderDevice(id) {
 function renderManualControl(site, label) {
   const current = manualControls[site] || 'AUTO';
   return `
-  <div class="card" style="margin-top: 2px; margin-bottom: 6px;">
+  <div class="card" style="margin-top: 2px; margin-bottom: 12px;">
     <div class="manual-row">
       <div class="manual-label">${label}</div>
       <div class="manual-btns">
@@ -236,8 +260,47 @@ async function setManual(site, mode) {
   } catch(e) { alert('설정 실패'); }
 }
 
-loadStatus();
-setInterval(loadStatus, 60000);
+// Pull to Refresh
+let touchStartY = 0;
+let isPulling = false;
+const pullIndicator = document.getElementById('pullIndicator');
+
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) {
+    touchStartY = e.touches[0].clientY;
+    isPulling = true;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!isPulling) return;
+  const delta = e.touches[0].clientY - touchStartY;
+  if (delta > 60) {
+    pullIndicator.classList.add('visible');
+    pullIndicator.textContent = '↑ 놓으면 새로고침';
+  } else if (delta > 20) {
+    pullIndicator.classList.add('visible');
+    pullIndicator.textContent = '↓ 당겨서 새로고침';
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!isPulling) return;
+  const delta = e.changedTouches[0].clientY - touchStartY;
+  if (delta > 60) {
+    pullIndicator.textContent = '🔄 새로고침 중...';
+    loadStatus().then(() => {
+      pullIndicator.classList.remove('visible');
+    });
+  } else {
+    pullIndicator.classList.remove('visible');
+  }
+  isPulling = false;
+});
+
+// 초기 로드: 캐시 먼저 보여주고 새 데이터 불러오기
+loadStatus(true);
+setInterval(() => loadStatus(false), 60000);
 </script>
 </body>
 </html>
