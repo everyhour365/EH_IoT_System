@@ -65,9 +65,13 @@
   @media (min-width: 768px) {
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
   }
-  .section { padding: 8px 12px 0; }
+  .section { padding: 0 12px; }
+  .section:first-child { padding-top: 10px; }
+  @media (min-width: 768px) {
+    .section { padding-top: 10px; }
+  }
   .card { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
-  .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid var(--border-soft); }
+  .device-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; border-bottom: 0.5px solid var(--border-soft); }
   .device-name { font-size: 17px; font-weight: 600; color: var(--text); }
   .device-sub { margin-top: 4px; }
   .power-btn { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 20px; }
@@ -77,22 +81,22 @@
   .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
   .status-on { background: var(--success-soft); color: var(--success-text); }
   .status-off { background: var(--border-soft); color: var(--text-sub); }
-  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; }
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 14px; }
   .mini-grid.single { grid-template-columns: 1fr; }
-  .mini-card { background: var(--card-sub); border-radius: 12px; padding: 10px 12px; }
-  .mini-title { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-sub); margin-bottom: 6px; }
+  .mini-card { background: var(--card-sub); border-radius: 12px; padding: 8px 10px; }
+  .mini-title { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-sub); margin-bottom: 4px; }
   .mini-power { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
   .mini-power.on { background: var(--success); }
   .mini-temps { display: flex; align-items: baseline; gap: 10px; font-size: 13px; color: var(--text-sub); }
-  .mini-temps .cur { font-size: 22px; font-weight: 600; color: var(--text); }
+  .mini-temps .cur { font-size: 20px; font-weight: 600; color: var(--text); }
   .mini-temps .cur .unit { font-size: 12px; color: var(--text-sub); font-weight: 400; margin-left: 1px; }
-  .seat-row { padding: 10px 16px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .seat-row { padding: 8px 14px 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .seat-label { font-size: 13px; color: var(--text-sub); }
   .seat-value { font-size: 16px; font-weight: 600; color: var(--text); }
   .seat-bar { flex: 1; min-width: 80px; height: 6px; background: var(--border-soft); border-radius: 3px; overflow: hidden; }
   .seat-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
   .longstay { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 10px; }
-  .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 0.5px solid var(--border-soft); gap: 12px; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 0.5px solid var(--border-soft); gap: 12px; }
   .row-label { font-size: 13px; color: var(--text-sub); flex-shrink: 0; }
   .row-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
   .temp-btns { display: flex; align-items: center; gap: 16px; }
@@ -127,7 +131,7 @@
   .toast.show { opacity: 1; }
   .cfg-btn { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--accent); cursor: pointer; }
   .cfg-btn:active { transform: scale(0.95); }
-  .section-divider { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 0.5px solid var(--border-soft); font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none; }
+  .section-divider { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 0.5px solid var(--border-soft); font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none; }
   .section-divider:active { background: var(--card-sub); }
   .collapse-arrow { transition: transform 0.2s; font-size: 10px; display: inline-block; }
   .collapse-arrow.collapsed { transform: rotate(-90deg); }
@@ -138,12 +142,14 @@
   .modal .modal-sub { font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
   .modal-row { margin-bottom: 12px; }
   .modal-row.inline { display: flex; gap: 10px; }
-  .modal-row.inline > div { flex: 1; }
+  .modal-row.inline > div { flex: 1; min-width: 0; }
   .modal-row-label { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
   .day-pills { display: flex; gap: 4px; }
   .day-pill { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid var(--border); background: var(--card); color: var(--text-sub); cursor: pointer; font-size: 13px; font-weight: 500; }
   .day-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-  .time-input { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 15px; font-family: inherit; text-align: center; }
+  .time-input { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 15px; font-family: inherit; text-align: center; -webkit-appearance: none; appearance: none; min-width: 0; display: block; }
+  .time-input::-webkit-date-and-time-value { text-align: center; }
+  .time-input::-webkit-calendar-picker-indicator { display: none; }
   .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
   .modal-btn { flex: 1; padding: 11px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; }
   .modal-btn.primary { background: var(--accent); color: #fff; }
@@ -367,7 +373,7 @@ function renderDevice(siteId, stale = false) {
   }).join('');
 
   return `
-    <div class="card${stale ? ' stale' : ''}">
+    <div class="card${stale ? ' stale' : ''}" style="margin-bottom: 10px;">
       <div class="device-header">
         <div>
           <div class="device-name">${site.name}</div>
@@ -667,11 +673,11 @@ function openCleanModal(siteId) {
     </div>
     <div class="modal-row inline">
       <div>
-        <div class="modal-row-label">시작</div>
+        <div class="modal-row-label">청소 시작</div>
         <input type="time" class="time-input" id="clStart" value="${hoursToHHMM(cc.startHour)}">
       </div>
       <div>
-        <div class="modal-row-label">종료(복원)</div>
+        <div class="modal-row-label">청소 종료</div>
         <input type="time" class="time-input" id="clEnd" value="${hoursToHHMM(cc.endHour)}">
       </div>
     </div>
