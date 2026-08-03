@@ -7,70 +7,142 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="EH IoT System">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <title>EH IoT System</title>
 <style>
+  :root {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --card-sub: #f7f7fa;
+    --text: #1c1c1e;
+    --text-sub: #8e8e93;
+    --border: #e5e5ea;
+    --border-soft: #f2f2f7;
+    --accent: #007aff;
+    --accent-soft: #e8f0fe;
+    --success: #34c759;
+    --success-soft: #e8fbe8;
+    --success-text: #1a8c2e;
+    --warn: #ff9500;
+    --warn-soft: #fff4e5;
+    --danger: #ff3b30;
+    --danger-soft: #fff0f0;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #000000;
+      --card: #1c1c1e;
+      --card-sub: #2c2c2e;
+      --text: #f2f2f7;
+      --text-sub: #98989f;
+      --border: #38383a;
+      --border-soft: #2c2c2e;
+      --accent: #0a84ff;
+      --accent-soft: #0a3a70;
+      --success: #30d158;
+      --success-soft: #0a3d1a;
+      --success-text: #6dea87;
+      --warn: #ff9f0a;
+      --warn-soft: #4a2e05;
+      --danger: #ff453a;
+      --danger-soft: #4a0f0d;
+      --shadow: 0 1px 3px rgba(0,0,0,0.4);
+    }
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f2f2f7; min-height: 100vh; overscroll-behavior-y: contain; }
-  .header { background: #fff; padding: 16px 20px 12px; border-bottom: 0.5px solid #e0e0e0; position: sticky; top: 0; z-index: 10; }
-  .header h1 { font-size: 20px; font-weight: 600; color: #1c1c1e; }
-  .last-update { font-size: 12px; color: #8e8e93; margin-top: 4px; }
-  .pull-indicator { text-align: center; padding: 0; height: 0; overflow: hidden; color: #8e8e93; font-size: 13px; transition: height 0.2s, padding 0.2s; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overscroll-behavior-y: contain; }
+  .pull-indicator { text-align: center; padding: 0; height: 0; overflow: hidden; color: var(--text-sub); font-size: 13px; transition: height 0.2s, padding 0.2s; }
   .pull-indicator.visible { height: 40px; padding: 12px 0; }
+  .header { background: var(--card); padding: 16px 20px 12px; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  .header h1 { font-size: 20px; font-weight: 600; color: var(--text); }
+  .status-line { font-size: 12px; color: var(--text-sub); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .status-line .dot { color: var(--border); }
+  .last-update { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .grid { display: block; }
+  @media (min-width: 768px) {
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  }
   .section { padding: 10px 16px 0; }
-  .card { background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-  .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid #f2f2f7; }
-  .device-name { font-size: 17px; font-weight: 600; color: #1c1c1e; }
+  .card { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+  .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid var(--border-soft); }
+  .device-name { font-size: 17px; font-weight: 600; color: var(--text); }
+  .device-sub { margin-top: 4px; }
   .power-btn { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 20px; }
-  .power-btn.on { background: #34c759; color: #fff; }
-  .power-btn.off { background: #e5e5ea; color: #8e8e93; }
+  .power-btn.on { background: var(--success); color: #fff; }
+  .power-btn.off { background: var(--border); color: var(--text-sub); }
   .power-btn:active { transform: scale(0.93); }
-  .stats-row { display: flex; padding: 12px 16px; }
-  .stat { flex: 1; text-align: center; }
-  .stat-label { font-size: 11px; color: #8e8e93; margin-bottom: 4px; }
-  .stat-value { font-size: 22px; font-weight: 600; color: #1c1c1e; }
-  .stat-unit { font-size: 13px; color: #8e8e93; }
-  .stat + .stat { border-left: 0.5px solid #e0e0e0; }
-  .temp-control { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 0.5px solid #f2f2f7; }
-  .temp-label { font-size: 13px; color: #8e8e93; }
-  .temp-btns { display: flex; align-items: center; gap: 16px; }
-  .temp-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid #007aff; background: #fff; color: #007aff; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
-  .temp-btn:active { background: #007aff; color: #fff; transform: scale(0.93); }
-  .temp-display { font-size: 20px; font-weight: 600; color: #1c1c1e; min-width: 60px; text-align: center; }
-  .wind-control { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 0.5px solid #f2f2f7; }
-  .wind-label { font-size: 13px; color: #8e8e93; }
-  .wind-btns { display: flex; gap: 8px; }
-  .wind-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e0e0e0; background: #fff; font-size: 13px; color: #8e8e93; cursor: pointer; transition: all 0.15s; }
-  .wind-btn.active { border-color: #007aff; color: #007aff; background: #e8f0fe; }
-  .wind-btn:active { transform: scale(0.95); }
-  .manual-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; }
-  .manual-label { font-size: 13px; color: #8e8e93; }
-  .manual-btns { display: flex; gap: 8px; }
-  .manual-btn { padding: 6px 14px; border-radius: 20px; border: 1.5px solid #e0e0e0; background: #fff; font-size: 13px; color: #8e8e93; cursor: pointer; transition: all 0.15s; }
-  .manual-btn.active-auto { border-color: #34c759; color: #34c759; background: #e8fbe8; }
-  .manual-btn.active-off { border-color: #ff3b30; color: #ff3b30; background: #fff0f0; }
-  .manual-btn.active-on { border-color: #007aff; color: #007aff; background: #e8f0fe; }
-  .manual-btn:active { transform: scale(0.95); }
   .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-  .status-on { background: #e8fbe8; color: #1a8c2e; }
-  .status-off { background: #f2f2f7; color: #8e8e93; }
-  .temp-trigger-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 0.5px solid #f2f2f7; }
-  .temp-trigger-left { display: flex; align-items: center; gap: 10px; }
-  .temp-trigger-label { font-size: 13px; color: #8e8e93; }
-  .toggle-wrap { position: relative; width: 44px; height: 26px; }
+  .status-on { background: var(--success-soft); color: var(--success-text); }
+  .status-off { background: var(--border-soft); color: var(--text-sub); }
+  .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; }
+  .mini-grid.single { grid-template-columns: 1fr; }
+  .mini-card { background: var(--card-sub); border-radius: 12px; padding: 10px 12px; }
+  .mini-title { display: flex; align-items: center; justify-content: space-between; font-size: 11px; color: var(--text-sub); margin-bottom: 6px; }
+  .mini-power { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .mini-power.on { background: var(--success); }
+  .mini-temps { display: flex; align-items: baseline; gap: 10px; font-size: 13px; color: var(--text-sub); }
+  .mini-temps .cur { font-size: 22px; font-weight: 600; color: var(--text); }
+  .mini-temps .cur .unit { font-size: 12px; color: var(--text-sub); font-weight: 400; margin-left: 1px; }
+  .seat-row { padding: 10px 16px 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .seat-label { font-size: 13px; color: var(--text-sub); }
+  .seat-value { font-size: 16px; font-weight: 600; color: var(--text); }
+  .seat-bar { flex: 1; min-width: 80px; height: 6px; background: var(--border-soft); border-radius: 3px; overflow: hidden; }
+  .seat-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+  .longstay { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; color: var(--warn); background: var(--warn-soft); padding: 2px 8px; border-radius: 10px; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-top: 0.5px solid var(--border-soft); gap: 12px; }
+  .row-label { font-size: 13px; color: var(--text-sub); flex-shrink: 0; }
+  .row-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+  .temp-btns { display: flex; align-items: center; gap: 16px; }
+  .temp-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--accent); background: var(--card); color: var(--accent); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
+  .temp-btn:active { background: var(--accent); color: #fff; transform: scale(0.93); }
+  .temp-display { font-size: 20px; font-weight: 600; color: var(--text); min-width: 60px; text-align: center; }
+  .wind-btns, .manual-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .pill { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all 0.15s; }
+  .pill:active { transform: scale(0.95); }
+  .pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .pill.active-auto { border-color: var(--success); color: var(--success-text); background: var(--success-soft); }
+  .pill.active-off { border-color: var(--danger); color: var(--danger); background: var(--danger-soft); }
+  .pill.active-on { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .toggle-wrap { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
   .toggle-wrap input { opacity: 0; width: 0; height: 0; }
-  .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: #e5e5ea; border-radius: 26px; transition: 0.2s; }
+  .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--border); border-radius: 26px; transition: 0.2s; }
   .toggle-slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-  input:checked + .toggle-slider { background: #ff9500; }
+  input:checked + .toggle-slider { background: var(--warn); }
   input:checked + .toggle-slider:before { transform: translateX(18px); }
+  input:checked + .toggle-slider.blue { background: var(--accent); }
   .trigger-temp-btns { display: flex; align-items: center; gap: 10px; }
-  .trigger-temp-btn { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #ff9500; background: #fff; color: #ff9500; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
-  .trigger-temp-btn:active { background: #ff9500; color: #fff; transform: scale(0.93); }
-  .trigger-temp-display { font-size: 16px; font-weight: 600; color: #1c1c1e; min-width: 44px; text-align: center; }
-  .refresh-btn { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: #007aff; color: #fff; border: none; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.35); transition: all 0.2s; }
+  .trigger-temp-btn { width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--warn); background: var(--card); color: var(--warn); font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
+  .trigger-temp-btn:active { background: var(--warn); color: #fff; transform: scale(0.93); }
+  .trigger-temp-display { font-size: 16px; font-weight: 600; color: var(--text); min-width: 44px; text-align: center; }
+  .row-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  .refresh-btn { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.35); transition: all 0.2s; z-index: 20; }
   .refresh-btn:active { transform: scale(0.93); }
   .stale { opacity: 0.6; }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .cfg-btn { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--accent); cursor: pointer; }
+  .cfg-btn:active { transform: scale(0.95); }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .modal-backdrop.show { display: flex; }
+  .modal { background: var(--card); border-radius: 16px; padding: 20px; width: 100%; max-width: 380px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .modal h2 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 12px; color: var(--text-sub); margin-bottom: 16px; }
+  .modal-row { margin-bottom: 14px; }
+  .modal-row-label { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
+  .day-pills { display: flex; gap: 6px; }
+  .day-pill { flex: 1; padding: 8px 0; text-align: center; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--text-sub); cursor: pointer; font-size: 13px; }
+  .day-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .time-input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 15px; font-family: inherit; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
+  .modal-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .modal-btn.primary { background: var(--accent); color: #fff; }
+  .modal-btn.secondary { background: var(--border-soft); color: var(--text); }
+  .modal-btn:active { transform: scale(0.98); }
 </style>
 </head>
 <body>
@@ -78,32 +150,58 @@
 <div class="pull-indicator" id="pullIndicator">↓ 당겨서 새로고침</div>
 
 <div class="header">
-  <h1>🌡️ EH IoT System</h1>
-  <div class="last-update" id="lastUpdate">불러오는 중...</div>
+  <div class="container">
+    <h1>🌡️ EH IoT System</h1>
+    <div class="status-line" id="statusLine">불러오는 중...</div>
+    <div class="last-update" id="lastUpdate"></div>
+  </div>
 </div>
 
-<div id="content"></div>
+<div class="container">
+  <div class="grid" id="content"></div>
+</div>
 
 <button class="refresh-btn" onclick="loadStatus()" id="refreshBtn" title="새로고침">↻</button>
+<div class="toast" id="toast"></div>
+
+<div class="modal-backdrop" id="modalBackdrop" onclick="closeModalIfBackdrop(event)">
+  <div class="modal" id="modal"></div>
+</div>
 
 <script>
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbyPfzjjvV6-6WL1UdBzrfzRRmqdYOwpu0M4oo6zU0Hqtsee18NCbABCybxdfHXnI8SAsQ/exec';
 const CACHE_KEY = 'eh_iot_cache';
 
-const DEVICES = {
-  seongsu: { name: '성수점 에어컨', sub: '현관 + 통창 2대', key: '현관', key2: '통창', winds: ['LOW','MID','HIGH'], tempStep: 1 },
-  guui:    { name: '구의점 에어컨', sub: '에브리아워 구의점', key: '구의', winds: ['LOW','MID','HIGH'], tempStep: 0.5 }
+const SITES = {
+  seongsu: {
+    name: '성수점 에어컨',
+    devices: [
+      { key: '현관', label: '현관', statusKey: 'seongsu_hyungwan' },
+      { key: '통창', label: '통창', statusKey: 'seongsu_tongchang' }
+    ],
+    seatKey: 'seongsu_seats',
+    seatCap: 26,
+    winds: ['LOW','MID','HIGH'],
+    tempStep: 1,
+    tempMin: 18,
+    tempMax: 30
+  },
+  guui: {
+    name: '구의점 에어컨',
+    devices: [
+      { key: '구의', label: '구의', statusKey: 'guui' }
+    ],
+    seatKey: 'guui_seats',
+    seatCap: 24,
+    winds: ['LOW','MID','HIGH'],
+    tempStep: 0.5,
+    tempMin: 18,
+    tempMax: 30
+  }
 };
 const WIND_LABELS = { LOW: '약풍', MID: '중풍', HIGH: '강풍' };
 
 let status = {};
-let manualControls = { seongsu: 'AUTO', guui: 'AUTO' };
-let tempCache = {};
-let tempTrigger = {
-  seongsu: { on: true, temp: 27 },
-  guui:    { on: true, temp: 27 }
-};
-let triggerTempCache = {};
 let isLoading = false;
 
 async function api(payload) {
@@ -111,10 +209,71 @@ async function api(payload) {
   return res.json();
 }
 
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function defaultStatus() {
+  return {
+    manualControls: { seongsu: 'AUTO', guui: 'AUTO' },
+    tempTrigger: { seongsu: { on: true, temp: 27 }, guui: { on: true, temp: 27 } },
+    cleanAuto: { seongsu: false, guui: false },
+    nightSms: { seongsu: false, guui: false },
+    cleanConfig: {
+      seongsu: { days: [], startHour: 6.333, endHour: 7.333 },
+      guui:    { days: [1,3,5], startHour: 6.333, endHour: 7.333 }
+    },
+    operatingHours: {
+      seongsu: { start: 7, stop: 2 },
+      guui:    { start: 7, stop: 2 }
+    },
+    statusLine: { seongsu: '', guui: '' }
+  };
+}
+
+function mergeStatus(data) {
+  const base = defaultStatus();
+  return Object.assign(base, data, {
+    manualControls: Object.assign(base.manualControls, data.manualControls || {}),
+    tempTrigger:    Object.assign(base.tempTrigger,    data.tempTrigger    || {}),
+    cleanAuto:      Object.assign(base.cleanAuto,      data.cleanAuto      || {}),
+    nightSms:       Object.assign(base.nightSms,       data.nightSms       || {}),
+    cleanConfig:    Object.assign(base.cleanConfig,    data.cleanConfig    || {}),
+    operatingHours: Object.assign(base.operatingHours, data.operatingHours || {}),
+    statusLine:     Object.assign(base.statusLine,     data.statusLine     || {})
+  });
+}
+
+const DAY_LABELS = ['일','월','화','수','목','금','토'];
+
+function hoursToHHMM(h) {
+  if (h == null || isNaN(h)) return '--:--';
+  const hr = Math.floor(h);
+  const min = Math.round((h - hr) * 60);
+  return String(hr).padStart(2,'0') + ':' + String(min).padStart(2,'0');
+}
+
+function hhmmToHours(str) {
+  const m = String(str || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const hr = Number(m[1]), min = Number(m[2]);
+  if (hr < 0 || hr > 23 || min < 0 || min > 59) return null;
+  return hr + min / 60;
+}
+
+function daysLabel(days) {
+  if (!days || days.length === 0) return '요일 미설정';
+  const sorted = days.slice().sort((a,b) => a - b);
+  return sorted.map(d => DAY_LABELS[d]).join('/');
+}
+
 async function loadStatus(showStale = false) {
   if (isLoading) return;
   isLoading = true;
-
   const btn = document.getElementById('refreshBtn');
   btn.innerHTML = '<span class="spinning">↻</span>';
 
@@ -123,31 +282,22 @@ async function loadStatus(showStale = false) {
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
         const { data, time } = JSON.parse(cached);
-        status = data;
-        manualControls = data.manualControls || { seongsu: 'AUTO', guui: 'AUTO' };
-        tempTrigger = data.tempTrigger || { seongsu: { on: true, temp: 27 }, guui: { on: true, temp: 27 } };
+        status = mergeStatus(data);
         renderAll(true);
-        document.getElementById('lastUpdate').textContent = '캐시: ' + new Date(time).toLocaleTimeString('ko-KR') + ' (업데이트 중...)';
+        document.getElementById('lastUpdate').textContent = '캐시: ' + new Date(time).toLocaleTimeString('ko-KR');
       }
     } catch(e) {}
   }
 
   try {
     const data = await api({ action: 'getStatus' });
-    status = data;
-    manualControls = data.manualControls || { seongsu: 'AUTO', guui: 'AUTO' };
-    tempTrigger = data.tempTrigger || { seongsu: { on: true, temp: 27 }, guui: { on: true, temp: 27 } };
-    tempCache = {};
-    triggerTempCache = {};
-
-    try {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ data, time: Date.now() }));
-    } catch(e) {}
-
+    status = mergeStatus(data);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, time: Date.now() })); } catch(e) {}
     renderAll(false);
     document.getElementById('lastUpdate').textContent = '업데이트: ' + new Date().toLocaleTimeString('ko-KR');
   } catch(e) {
     document.getElementById('lastUpdate').textContent = '❌ 불러오기 실패';
+    toast('불러오기 실패');
   }
 
   btn.innerHTML = '↻';
@@ -155,173 +305,388 @@ async function loadStatus(showStale = false) {
 }
 
 function renderAll(stale = false) {
-  const html = `
+  const lines = [];
+  if (status.statusLine?.seongsu) lines.push('성수 ' + status.statusLine.seongsu);
+  if (status.statusLine?.guui)    lines.push('구의 ' + status.statusLine.guui);
+  document.getElementById('statusLine').innerHTML = lines.length
+    ? lines.map(l => '<span>' + l + '</span>').join('<span class="dot">·</span>')
+    : '<span>정보 없음</span>';
+
+  document.getElementById('content').innerHTML = `
     <div class="section">
       ${renderDevice('seongsu', stale)}
-      ${renderManualControl('seongsu', '성수점 자동화 제어')}
-      ${renderTempTrigger('seongsu', '성수점 온도 자동가동')}
     </div>
     <div class="section">
       ${renderDevice('guui', stale)}
-      ${renderManualControl('guui', '구의점 자동화 제어')}
-      ${renderTempTrigger('guui', '구의점 온도 자동가동')}
     </div>
-    <div style="height: 80px;"></div>
+    <div style="height: 100px;"></div>
   `;
-  document.getElementById('content').innerHTML = html;
 }
 
-function renderDevice(id, stale = false) {
-  const d = DEVICES[id];
-  const s = id === 'seongsu' ? (status.seongsu_hyungwan || {}) : (status[id] || {});
-  const isOn = s.power === 'POWER_ON';
-  const seats = id === 'guui' ? status.guui_seats : status.seongsu_seats;
-  const currentTargetTemp = tempCache[id] ?? s.targetTemp;
-  const seatTotal = seats?.total ?? 0;
-  const seatCap = id === 'guui' ? 24 : 26;
-  const longStay = seats?.longStay ?? 0;
+function siteState(siteId) {
+  const site = SITES[siteId];
+  const states = site.devices.map(d => status[d.statusKey] || {});
+  const anyOn = states.some(s => s.power === 'POWER_ON');
+  const primary = states[0] || {};
+  return { states, anyOn, primary };
+}
 
-  return `
-  <div class="card${stale ? ' stale' : ''}" style="margin-bottom: 2px;">
-    <div class="device-header">
-      <div>
-        <div class="device-name">${d.name}</div>
-        <div class="device-sub">
-          <span class="status-badge ${isOn ? 'status-on' : 'status-off'}">
-            ${isOn ? '● 가동중' : '○ 정지'}
-          </span>
+function renderDevice(siteId, stale = false) {
+  const site = SITES[siteId];
+  const { states, anyOn, primary } = siteState(siteId);
+  const seats = status[site.seatKey] || { total: 0, longStay: 0 };
+  const seatPct = Math.min(100, Math.round((seats.total / site.seatCap) * 100));
+  const targetTemp = primary.targetTemp ?? '--';
+
+  const miniCards = site.devices.map((d, i) => {
+    const s = states[i];
+    const on = s.power === 'POWER_ON';
+    return `
+      <div class="mini-card">
+        <div class="mini-title">
+          <span>${d.label}</span>
+          <span class="mini-power ${on ? 'on' : ''}"></span>
+        </div>
+        <div class="mini-temps">
+          <span class="cur">${s.currentTemp ?? '--'}<span class="unit">°C</span></span>
+          <span>설정 ${s.targetTemp ?? '--'}°C</span>
         </div>
       </div>
-      <button class="power-btn ${isOn ? 'on' : 'off'}" onclick="togglePower('${id}', ${!isOn})">⏻</button>
-    </div>
-    <div class="stats-row">
-      <div class="stat">
-        <div class="stat-label">실내온도</div>
-        <div class="stat-value">${s.currentTemp ?? '--'}<span class="stat-unit">°C</span></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">설정온도</div>
-        <div class="stat-value">${currentTargetTemp ?? '--'}<span class="stat-unit">°C</span></div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">좌석</div>
-        <div class="stat-value">${seatTotal}<span class="stat-unit">/${seatCap}</span>${longStay > 0 ? `<span style="font-size: 13px; color: #ff9500; margin-left: 4px;">(${longStay}명)</span>` : ''}</div>
-      </div>
-    </div>
-    ${isOn ? `
-    <div class="temp-control">
-      <div class="temp-label">희망온도</div>
-      <div class="temp-btns">
-        <button class="temp-btn" onclick="changeTemp('${id}', -1)">−</button>
-        <div class="temp-display" id="temp-${id}">${currentTargetTemp ?? '--'}°C</div>
-        <button class="temp-btn" onclick="changeTemp('${id}', 1)">+</button>
-      </div>
-    </div>
-    <div class="wind-control">
-      <div class="wind-label">바람세기</div>
-      <div class="wind-btns">
-        ${d.winds.map(w => `<button class="wind-btn ${s.windStrength === w ? 'active' : ''}" onclick="changeWind('${id}', '${w}')">${WIND_LABELS[w]}</button>`).join('')}
-      </div>
-    </div>` : ''}
-  </div>`;
-}
+    `;
+  }).join('');
 
-function renderManualControl(site, label) {
-  const current = manualControls[site] || 'AUTO';
   return `
-  <div class="card" style="margin-top: 2px; margin-bottom: 2px;">
-    <div class="manual-row">
-      <div class="manual-label">${label}</div>
-      <div class="manual-btns">
-        <button class="manual-btn ${current === 'AUTO' ? 'active-auto' : ''}" onclick="setManual('${site}', 'AUTO')">자동</button>
-        <button class="manual-btn ${current === 'ON' ? 'active-on' : ''}" onclick="setManual('${site}', 'ON')">강제ON</button>
-        <button class="manual-btn ${current === 'OFF' ? 'active-off' : ''}" onclick="setManual('${site}', 'OFF')">강제OFF</button>
+    <div class="card${stale ? ' stale' : ''}" style="margin-bottom: 12px;">
+      <div class="device-header">
+        <div>
+          <div class="device-name">${site.name}</div>
+          <div class="device-sub">
+            <span class="status-badge ${anyOn ? 'status-on' : 'status-off'}">
+              ${anyOn ? '● 가동중' : '○ 정지'}
+            </span>
+          </div>
+        </div>
+        <button class="power-btn ${anyOn ? 'on' : 'off'}" onclick="togglePower('${siteId}', ${!anyOn})">⏻</button>
       </div>
-    </div>
-  </div>`;
-}
 
-function renderTempTrigger(site, label) {
-  const t = tempTrigger[site] || { on: true, temp: 27 };
-  const displayTemp = triggerTempCache[site] ?? t.temp;
-  return `
-  <div class="card" style="margin-top: 2px; margin-bottom: 12px;">
-    <div class="temp-trigger-row">
-      <div class="temp-trigger-left">
-        <div class="temp-trigger-label">${label}</div>
+      <div class="mini-grid ${site.devices.length === 1 ? 'single' : ''}">
+        ${miniCards}
+      </div>
+
+      <div class="seat-row">
+        <span class="seat-label">좌석</span>
+        <span class="seat-value">${seats.total}<span style="color: var(--text-sub); font-weight: 400;">/${site.seatCap}</span></span>
+        <div class="seat-bar"><div class="seat-fill" style="width: ${seatPct}%"></div></div>
+        ${seats.longStay > 0 ? `<span class="longstay">⚠ 10시간↑ ${seats.longStay}명</span>` : ''}
+      </div>
+
+      ${anyOn ? `
+      <div class="row">
+        <div>
+          <div class="row-label">희망온도</div>
+          ${site.devices.length > 1 ? '<div class="row-sub">2대 동시</div>' : ''}
+        </div>
+        <div class="temp-btns">
+          <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
+          <div class="temp-display" id="temp-${siteId}">${targetTemp}°C</div>
+          <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-label">바람세기</div>
+        <div class="wind-btns">
+          ${site.winds.map(w => `<button class="pill ${primary.windStrength === w ? 'active' : ''}" onclick="changeWind('${siteId}', '${w}')">${WIND_LABELS[w]}</button>`).join('')}
+        </div>
+      </div>
+      ` : ''}
+
+      <div class="row">
+        <div class="row-label">자동화</div>
+        <div class="manual-btns">
+          ${['AUTO','ON','OFF'].map(m => {
+            const cur = status.manualControls[siteId];
+            const cls = cur === m ? (m === 'AUTO' ? 'active-auto' : m === 'ON' ? 'active-on' : 'active-off') : '';
+            const label = m === 'AUTO' ? '자동' : m === 'ON' ? '강제ON' : '강제OFF';
+            return `<button class="pill ${cls}" onclick="setManual('${siteId}', '${m}')">${label}</button>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="row-label" style="display: flex; align-items: center; gap: 10px;">
+          <span>온도가동</span>
+          <label class="toggle-wrap">
+            <input type="checkbox" ${status.tempTrigger[siteId].on ? 'checked' : ''} onchange="setTempTriggerOn('${siteId}', this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="trigger-temp-btns">
+          <span style="font-size: 12px; color: var(--text-sub);">≥</span>
+          <button class="trigger-temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
+          <div class="trigger-temp-display" id="ttmp-${siteId}">${status.tempTrigger[siteId].temp}°C</div>
+          <button class="trigger-temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">가동시간</div>
+          <div class="row-sub">${hoursToHHMM(status.operatingHours[siteId].start)} 시작 · ${hoursToHHMM(status.operatingHours[siteId].stop)} 절전</div>
+        </div>
+        <button class="cfg-btn" onclick="openOperatingModal('${siteId}')">설정</button>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">청소자동</div>
+          <div class="row-sub">${daysLabel(status.cleanConfig[siteId].days)} · ${hoursToHHMM(status.cleanConfig[siteId].startHour)}~${hoursToHHMM(status.cleanConfig[siteId].endHour)} 설정온도</div>
+        </div>
+        <div class="row-right">
+          <button class="cfg-btn" onclick="openCleanModal('${siteId}')">설정</button>
+          <label class="toggle-wrap">
+            <input type="checkbox" ${status.cleanAuto[siteId] ? 'checked' : ''} onchange="setCleanAuto('${siteId}', this.checked)">
+            <span class="toggle-slider blue"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="row-label">새벽문자</div>
+          <div class="row-sub">${hoursToHHMM(status.operatingHours[siteId].stop)} 절전 시각에 SMS 발송 후 OFF</div>
+        </div>
         <label class="toggle-wrap">
-          <input type="checkbox" ${t.on ? 'checked' : ''} onchange="setTempTriggerOn('${site}', this.checked)">
-          <span class="toggle-slider"></span>
+          <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
+          <span class="toggle-slider blue"></span>
         </label>
       </div>
-      <div class="trigger-temp-btns">
-        <button class="trigger-temp-btn" onclick="changeTriggerTemp('${site}', -1)">−</button>
-        <div class="trigger-temp-display" id="ttmp-${site}">${displayTemp}°C</div>
-        <button class="trigger-temp-btn" onclick="changeTriggerTemp('${site}', 1)">+</button>
-      </div>
     </div>
-  </div>`;
+  `;
 }
 
-async function togglePower(id, on) {
-  const d = DEVICES[id];
+async function togglePower(siteId, on) {
+  const site = SITES[siteId];
+  const prevStates = site.devices.map(d => ({ key: d.statusKey, power: status[d.statusKey]?.power }));
+  site.devices.forEach(d => {
+    if (status[d.statusKey]) status[d.statusKey].power = on ? 'POWER_ON' : 'POWER_OFF';
+  });
+  renderAll();
   try {
-    await api({ action: 'control', device: d.key, power: on });
-    if (d.key2) await api({ action: 'control', device: d.key2, power: on });
-    await loadStatus();
-  } catch(e) { alert('제어 실패'); }
-}
-
-async function changeTemp(id, delta) {
-  const d = DEVICES[id];
-  const s = id === 'seongsu' ? (status.seongsu_hyungwan || {}) : (status[id] || {});
-  const current = tempCache[id] ?? s.targetTemp ?? 25;
-  const newTemp = Math.round((current + delta * d.tempStep) * 10) / 10;
-  if (newTemp < 18 || newTemp > 30) return;
-  tempCache[id] = newTemp;
-  document.getElementById('temp-' + id).textContent = newTemp + '°C';
-  try {
-    await api({ action: 'control', device: d.key, temp: newTemp });
-    if (d.key2) await api({ action: 'control', device: d.key2, temp: newTemp });
-  } catch(e) { alert('온도 변경 실패'); }
-}
-
-async function changeWind(id, wind) {
-  const d = DEVICES[id];
-  try {
-    await api({ action: 'control', device: d.key, windStrength: wind });
-    if (d.key2) await api({ action: 'control', device: d.key2, windStrength: wind });
-    await loadStatus();
-  } catch(e) { alert('바람 변경 실패'); }
-}
-
-async function setManual(site, mode) {
-  try {
-    await api({ action: 'setManual', site: site, mode: mode });
-    manualControls[site] = mode;
+    for (const d of site.devices) await api({ action: 'control', device: d.key, power: on });
+    setTimeout(() => loadStatus(), 1500);
+  } catch(e) {
+    prevStates.forEach(p => { if (status[p.key]) status[p.key].power = p.power; });
     renderAll();
-  } catch(e) { alert('설정 실패'); }
+    toast('제어 실패');
+  }
 }
 
-async function setTempTriggerOn(site, on) {
-  tempTrigger[site] = tempTrigger[site] || { on: true, temp: 27 };
-  tempTrigger[site].on = on;
+async function changeTemp(siteId, delta) {
+  const site = SITES[siteId];
+  const primary = status[site.devices[0].statusKey] || {};
+  const current = primary.targetTemp ?? 25;
+  const newTemp = Math.round((current + delta * site.tempStep) * 10) / 10;
+  if (newTemp < site.tempMin || newTemp > site.tempMax) return;
+  const prev = site.devices.map(d => status[d.statusKey]?.targetTemp);
+  site.devices.forEach(d => { if (status[d.statusKey]) status[d.statusKey].targetTemp = newTemp; });
+  document.getElementById('temp-' + siteId).textContent = newTemp + '°C';
   try {
-    await api({ action: 'setTempTrigger', site: site, on: on });
-  } catch(e) { alert('설정 실패'); }
+    for (const d of site.devices) await api({ action: 'control', device: d.key, temp: newTemp });
+  } catch(e) {
+    site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].targetTemp = prev[i]; });
+    renderAll();
+    toast('온도 변경 실패');
+  }
 }
 
-async function changeTriggerTemp(site, delta) {
-  const current = triggerTempCache[site] ?? tempTrigger[site]?.temp ?? 27;
+async function changeWind(siteId, wind) {
+  const site = SITES[siteId];
+  const prev = site.devices.map(d => status[d.statusKey]?.windStrength);
+  site.devices.forEach(d => { if (status[d.statusKey]) status[d.statusKey].windStrength = wind; });
+  renderAll();
+  try {
+    for (const d of site.devices) await api({ action: 'control', device: d.key, windStrength: wind });
+  } catch(e) {
+    site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].windStrength = prev[i]; });
+    renderAll();
+    toast('바람 변경 실패');
+  }
+}
+
+async function setManual(siteId, mode) {
+  const prev = status.manualControls[siteId];
+  status.manualControls[siteId] = mode;
+  renderAll();
+  try {
+    await api({ action: 'setManual', site: siteId, mode: mode });
+  } catch(e) {
+    status.manualControls[siteId] = prev;
+    renderAll();
+    toast('설정 실패');
+  }
+}
+
+async function setTempTriggerOn(siteId, on) {
+  const prev = status.tempTrigger[siteId].on;
+  status.tempTrigger[siteId].on = on;
+  try {
+    await api({ action: 'setTempTrigger', site: siteId, on: on });
+  } catch(e) {
+    status.tempTrigger[siteId].on = prev;
+    renderAll();
+    toast('설정 실패');
+  }
+}
+
+async function changeTriggerTemp(siteId, delta) {
+  const current = status.tempTrigger[siteId].temp;
   const newTemp = current + delta;
   if (newTemp < 20 || newTemp > 35) return;
-  triggerTempCache[site] = newTemp;
-  tempTrigger[site] = tempTrigger[site] || { on: true, temp: 27 };
-  tempTrigger[site].temp = newTemp;
-  document.getElementById('ttmp-' + site).textContent = newTemp + '°C';
+  status.tempTrigger[siteId].temp = newTemp;
+  document.getElementById('ttmp-' + siteId).textContent = newTemp + '°C';
   try {
-    await api({ action: 'setTempTrigger', site: site, temp: newTemp });
-  } catch(e) { alert('온도 변경 실패'); }
+    await api({ action: 'setTempTrigger', site: siteId, temp: newTemp });
+  } catch(e) {
+    status.tempTrigger[siteId].temp = current;
+    renderAll();
+    toast('온도 변경 실패');
+  }
+}
+
+async function setCleanAuto(siteId, on) {
+  const prev = status.cleanAuto[siteId];
+  status.cleanAuto[siteId] = on;
+  try {
+    const r = await api({ action: 'setCleanAuto', site: siteId, on: on });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+    toast(on ? '청소자동 켬' : '청소자동 끔');
+  } catch(e) {
+    status.cleanAuto[siteId] = prev;
+    renderAll();
+    toast('설정 실패: ' + (e.message || ''));
+  }
+}
+
+async function setNightSms(siteId, on) {
+  const prev = status.nightSms[siteId];
+  status.nightSms[siteId] = on;
+  try {
+    const r = await api({ action: 'setNightSms', site: siteId, on: on });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+    toast(on ? '새벽문자 켬' : '새벽문자 끔');
+  } catch(e) {
+    status.nightSms[siteId] = prev;
+    renderAll();
+    toast('설정 실패: ' + (e.message || ''));
+  }
+}
+
+// Modal
+function closeModal() {
+  document.getElementById('modalBackdrop').classList.remove('show');
+}
+function closeModalIfBackdrop(e) {
+  if (e.target.id === 'modalBackdrop') closeModal();
+}
+function openModal(html) {
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modalBackdrop').classList.add('show');
+}
+
+function openOperatingModal(siteId) {
+  const oh = status.operatingHours[siteId];
+  openModal(`
+    <h2>가동시간 설정 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
+    <div class="modal-sub">자동가동 시작·절전 진입 시각</div>
+    <div class="modal-row">
+      <div class="modal-row-label">가동 시작</div>
+      <input type="time" class="time-input" id="opStart" value="${hoursToHHMM(oh.start)}">
+    </div>
+    <div class="modal-row">
+      <div class="modal-row-label">절전 시작</div>
+      <input type="time" class="time-input" id="opStop" value="${hoursToHHMM(oh.stop)}">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveOperating('${siteId}')">저장</button>
+    </div>
+  `);
+}
+
+async function saveOperating(siteId) {
+  const start = hhmmToHours(document.getElementById('opStart').value);
+  const stop  = hhmmToHours(document.getElementById('opStop').value);
+  if (start == null || stop == null) return toast('시간 형식 오류');
+  const prev = { ...status.operatingHours[siteId] };
+  status.operatingHours[siteId] = { start, stop };
+  renderAll();
+  closeModal();
+  try {
+    const r1 = await api({ action: 'setSetting', site: siteId, key: '가동_시작시간', value: start });
+    const r2 = await api({ action: 'setSetting', site: siteId, key: '절전_시작시간', value: stop });
+    if (r1.success === false || r2.success === false) throw new Error(r1.error || r2.error);
+    toast('가동시간 저장됨');
+  } catch(e) {
+    status.operatingHours[siteId] = prev;
+    renderAll();
+    toast('저장 실패: ' + (e.message || ''));
+  }
+}
+
+function openCleanModal(siteId) {
+  const cc = status.cleanConfig[siteId];
+  const pills = DAY_LABELS.map((lbl, i) => {
+    const active = cc.days.includes(i) ? 'active' : '';
+    return `<div class="day-pill ${active}" data-day="${i}" onclick="toggleDayPill(this)">${lbl}</div>`;
+  }).join('');
+  openModal(`
+    <h2>청소자동 설정 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
+    <div class="modal-sub">지정 요일·시간에 설정온도로 가동</div>
+    <div class="modal-row">
+      <div class="modal-row-label">요일</div>
+      <div class="day-pills">${pills}</div>
+    </div>
+    <div class="modal-row" style="display: flex; gap: 10px;">
+      <div style="flex: 1;">
+        <div class="modal-row-label">시작</div>
+        <input type="time" class="time-input" id="clStart" value="${hoursToHHMM(cc.startHour)}">
+      </div>
+      <div style="flex: 1;">
+        <div class="modal-row-label">종료(복원)</div>
+        <input type="time" class="time-input" id="clEnd" value="${hoursToHHMM(cc.endHour)}">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveClean('${siteId}')">저장</button>
+    </div>
+  `);
+}
+
+function toggleDayPill(el) {
+  el.classList.toggle('active');
+}
+
+async function saveClean(siteId) {
+  const days = Array.from(document.querySelectorAll('.day-pill.active')).map(el => Number(el.dataset.day)).sort((a,b) => a-b);
+  const startHour = hhmmToHours(document.getElementById('clStart').value);
+  const endHour   = hhmmToHours(document.getElementById('clEnd').value);
+  if (startHour == null || endHour == null) return toast('시간 형식 오류');
+  const prev = { ...status.cleanConfig[siteId] };
+  status.cleanConfig[siteId] = { days, startHour, endHour };
+  renderAll();
+  closeModal();
+  try {
+    const r1 = await api({ action: 'setSetting', site: siteId, key: '청소자동_요일', value: days.join(',') });
+    const r2 = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작시간', value: startHour });
+    const r3 = await api({ action: 'setSetting', site: siteId, key: '청소자동_종료시간', value: endHour });
+    if (r1.success === false || r2.success === false || r3.success === false) throw new Error(r1.error || r2.error || r3.error);
+    toast('청소 설정 저장됨');
+  } catch(e) {
+    status.cleanConfig[siteId] = prev;
+    renderAll();
+    toast('저장 실패: ' + (e.message || ''));
+  }
 }
 
 // Pull to Refresh
@@ -353,15 +718,14 @@ document.addEventListener('touchend', e => {
   const delta = e.changedTouches[0].clientY - touchStartY;
   if (delta > 60) {
     pullIndicator.textContent = '🔄 새로고침 중...';
-    loadStatus().then(() => {
-      pullIndicator.classList.remove('visible');
-    });
+    loadStatus().then(() => pullIndicator.classList.remove('visible'));
   } else {
     pullIndicator.classList.remove('visible');
   }
   isPulling = false;
 });
 
+status = defaultStatus();
 loadStatus(true);
 setInterval(() => loadStatus(false), 60000);
 </script>
