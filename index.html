@@ -65,7 +65,7 @@
   @media (min-width: 768px) {
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
   }
-  .section { padding: 10px 16px 0; }
+  .section { padding: 8px 12px 0; }
   .card { background: var(--card); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
   .device-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; border-bottom: 0.5px solid var(--border-soft); }
   .device-name { font-size: 17px; font-weight: 600; color: var(--text); }
@@ -133,17 +133,19 @@
   .collapse-arrow.collapsed { transform: rotate(-90deg); }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
   .modal-backdrop.show { display: flex; }
-  .modal { background: var(--card); border-radius: 16px; padding: 20px; width: 100%; max-width: 380px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
-  .modal h2 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
-  .modal .modal-sub { font-size: 12px; color: var(--text-sub); margin-bottom: 16px; }
-  .modal-row { margin-bottom: 14px; }
-  .modal-row-label { font-size: 12px; color: var(--text-sub); margin-bottom: 8px; }
-  .day-pills { display: flex; gap: 6px; }
-  .day-pill { flex: 1; padding: 8px 0; text-align: center; border-radius: 8px; border: 1.5px solid var(--border); background: var(--card); color: var(--text-sub); cursor: pointer; font-size: 13px; }
+  .modal { background: var(--card); border-radius: 16px; padding: 18px; width: 100%; max-width: 380px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .modal h2 { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .modal .modal-sub { font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
+  .modal-row { margin-bottom: 12px; }
+  .modal-row.inline { display: flex; gap: 10px; }
+  .modal-row.inline > div { flex: 1; }
+  .modal-row-label { font-size: 12px; color: var(--text-sub); margin-bottom: 6px; }
+  .day-pills { display: flex; gap: 4px; }
+  .day-pill { flex: 1; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 1.5px solid var(--border); background: var(--card); color: var(--text-sub); cursor: pointer; font-size: 13px; font-weight: 500; }
   .day-pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-  .time-input { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 15px; font-family: inherit; }
-  .modal-actions { display: flex; gap: 8px; margin-top: 8px; }
-  .modal-btn { flex: 1; padding: 12px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .time-input { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 15px; font-family: inherit; text-align: center; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 6px; }
+  .modal-btn { flex: 1; padding: 11px; border-radius: 12px; border: none; font-size: 14px; font-weight: 500; cursor: pointer; }
   .modal-btn.primary { background: var(--accent); color: #fff; }
   .modal-btn.secondary { background: var(--border-soft); color: var(--text); }
   .modal-btn:active { transform: scale(0.98); }
@@ -328,7 +330,7 @@ function renderAll(stale = false) {
     <div class="section">
       ${renderDevice('guui', stale)}
     </div>
-    <div style="height: 100px;"></div>
+    <div style="height: 32px;"></div>
   `;
 }
 
@@ -365,7 +367,7 @@ function renderDevice(siteId, stale = false) {
   }).join('');
 
   return `
-    <div class="card${stale ? ' stale' : ''}" style="margin-bottom: 12px;">
+    <div class="card${stale ? ' stale' : ''}">
       <div class="device-header">
         <div>
           <div class="device-name">${site.name}</div>
@@ -613,13 +615,15 @@ function openOperatingModal(siteId) {
   openModal(`
     <h2>가동시간 설정 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
     <div class="modal-sub">자동가동 시작·절전 진입 시각</div>
-    <div class="modal-row">
-      <div class="modal-row-label">가동 시작</div>
-      <input type="time" class="time-input" id="opStart" value="${hoursToHHMM(oh.start)}">
-    </div>
-    <div class="modal-row">
-      <div class="modal-row-label">절전 시작</div>
-      <input type="time" class="time-input" id="opStop" value="${hoursToHHMM(oh.stop)}">
+    <div class="modal-row inline">
+      <div>
+        <div class="modal-row-label">가동 시작</div>
+        <input type="time" class="time-input" id="opStart" value="${hoursToHHMM(oh.start)}">
+      </div>
+      <div>
+        <div class="modal-row-label">절전 시작</div>
+        <input type="time" class="time-input" id="opStop" value="${hoursToHHMM(oh.stop)}">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()">취소</button>
@@ -661,12 +665,12 @@ function openCleanModal(siteId) {
       <div class="modal-row-label">요일</div>
       <div class="day-pills">${pills}</div>
     </div>
-    <div class="modal-row" style="display: flex; gap: 10px;">
-      <div style="flex: 1;">
+    <div class="modal-row inline">
+      <div>
         <div class="modal-row-label">시작</div>
         <input type="time" class="time-input" id="clStart" value="${hoursToHHMM(cc.startHour)}">
       </div>
-      <div style="flex: 1;">
+      <div>
         <div class="modal-row-label">종료(복원)</div>
         <input type="time" class="time-input" id="clEnd" value="${hoursToHHMM(cc.endHour)}">
       </div>
@@ -742,7 +746,25 @@ document.addEventListener('touchend', e => {
 
 status = defaultStatus();
 loadStatus(true);
-setInterval(() => loadStatus(false), 60000);
+
+const POLL_MS = 5 * 60 * 1000;
+let pollTimer = null;
+function startPolling() {
+  stopPolling();
+  pollTimer = setInterval(() => loadStatus(false), POLL_MS);
+}
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPolling();
+  } else {
+    loadStatus(false);
+    startPolling();
+  }
+});
+startPolling();
 </script>
 </body>
 </html>
