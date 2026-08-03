@@ -127,6 +127,10 @@
   .toast.show { opacity: 1; }
   .cfg-btn { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--accent); cursor: pointer; }
   .cfg-btn:active { transform: scale(0.95); }
+  .section-divider { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-top: 0.5px solid var(--border-soft); font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none; }
+  .section-divider:active { background: var(--card-sub); }
+  .collapse-arrow { transition: transform 0.2s; font-size: 10px; display: inline-block; }
+  .collapse-arrow.collapsed { transform: rotate(-90deg); }
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
   .modal-backdrop.show { display: flex; }
   .modal { background: var(--card); border-radius: 16px; padding: 20px; width: 100%; max-width: 380px; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
@@ -204,6 +208,15 @@ const WIND_LABELS = { LOW: '약풍', MID: '중풍', HIGH: '강풍' };
 
 let status = {};
 let isLoading = false;
+let collapsed = (() => {
+  try { return JSON.parse(localStorage.getItem('eh_iot_collapsed')) || { seongsu: true, guui: true }; }
+  catch(e) { return { seongsu: true, guui: true }; }
+})();
+function toggleCollapse(siteId) {
+  collapsed[siteId] = !collapsed[siteId];
+  try { localStorage.setItem('eh_iot_collapsed', JSON.stringify(collapsed)); } catch(e) {}
+  renderAll();
+}
 
 async function api(payload) {
   const res = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(payload) });
@@ -396,6 +409,12 @@ function renderDevice(siteId, stale = false) {
       </div>
       ` : ''}
 
+      <div class="section-divider" onclick="toggleCollapse('${siteId}')">
+        <span>자동화 설정</span>
+        <span class="collapse-arrow ${collapsed[siteId] ? 'collapsed' : ''}">▼</span>
+      </div>
+
+      ${collapsed[siteId] ? '' : `
       <div class="row">
         <div class="row-label">자동화</div>
         <div class="manual-btns">
@@ -455,6 +474,7 @@ function renderDevice(siteId, stale = false) {
           <span class="toggle-slider blue"></span>
         </label>
       </div>
+      `}
     </div>
   `;
 }
