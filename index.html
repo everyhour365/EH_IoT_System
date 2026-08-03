@@ -118,7 +118,7 @@
   .trigger-temp-btn:active { background: var(--warn); color: #fff; transform: scale(0.93); }
   .trigger-temp-display { font-size: 16px; font-weight: 600; color: var(--text); min-width: 44px; text-align: center; }
   .row-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-  .refresh-btn { position: fixed; bottom: 24px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,122,255,0.35); transition: all 0.2s; z-index: 20; }
+  .refresh-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,122,255,0.25); transition: all 0.2s; flex-shrink: 0; }
   .refresh-btn:active { transform: scale(0.93); }
   .stale { opacity: 0.6; }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
@@ -150,10 +150,12 @@
 <div class="pull-indicator" id="pullIndicator">↓ 당겨서 새로고침</div>
 
 <div class="header">
-  <div class="container">
-    <h1>🌡️ EH IoT System</h1>
-    <div class="status-line" id="statusLine">불러오는 중...</div>
-    <div class="last-update" id="lastUpdate"></div>
+  <div class="container" style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+    <div>
+      <h1>EH IoT System</h1>
+      <div class="last-update" id="lastUpdate"></div>
+    </div>
+    <button class="refresh-btn" onclick="loadStatus()" id="refreshBtn" title="새로고침">↻</button>
   </div>
 </div>
 
@@ -161,7 +163,6 @@
   <div class="grid" id="content"></div>
 </div>
 
-<button class="refresh-btn" onclick="loadStatus()" id="refreshBtn" title="새로고침">↻</button>
 <div class="toast" id="toast"></div>
 
 <div class="modal-backdrop" id="modalBackdrop" onclick="closeModalIfBackdrop(event)">
@@ -249,6 +250,8 @@ function mergeStatus(data) {
 }
 
 const DAY_LABELS = ['일','월','화','수','목','금','토'];
+const DAY_DISPLAY_ORDER = [1,2,3,4,5,6,0];
+const daySort = (a,b) => (a===0?7:a) - (b===0?7:b);
 
 function hoursToHHMM(h) {
   if (h == null || isNaN(h)) return '--:--';
@@ -267,7 +270,7 @@ function hhmmToHours(str) {
 
 function daysLabel(days) {
   if (!days || days.length === 0) return '요일 미설정';
-  const sorted = days.slice().sort((a,b) => a - b);
+  const sorted = days.slice().sort(daySort);
   return sorted.map(d => DAY_LABELS[d]).join('/');
 }
 
@@ -305,13 +308,6 @@ async function loadStatus(showStale = false) {
 }
 
 function renderAll(stale = false) {
-  const lines = [];
-  if (status.statusLine?.seongsu) lines.push('성수 ' + status.statusLine.seongsu);
-  if (status.statusLine?.guui)    lines.push('구의 ' + status.statusLine.guui);
-  document.getElementById('statusLine').innerHTML = lines.length
-    ? lines.map(l => '<span>' + l + '</span>').join('<span class="dot">·</span>')
-    : '<span>정보 없음</span>';
-
   document.getElementById('content').innerHTML = `
     <div class="section">
       ${renderDevice('seongsu', stale)}
@@ -421,7 +417,6 @@ function renderDevice(siteId, stale = false) {
           </label>
         </div>
         <div class="trigger-temp-btns">
-          <span style="font-size: 12px; color: var(--text-sub);">≥</span>
           <button class="trigger-temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
           <div class="trigger-temp-display" id="ttmp-${siteId}">${status.tempTrigger[siteId].temp}°C</div>
           <button class="trigger-temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
@@ -635,9 +630,9 @@ async function saveOperating(siteId) {
 
 function openCleanModal(siteId) {
   const cc = status.cleanConfig[siteId];
-  const pills = DAY_LABELS.map((lbl, i) => {
+  const pills = DAY_DISPLAY_ORDER.map(i => {
     const active = cc.days.includes(i) ? 'active' : '';
-    return `<div class="day-pill ${active}" data-day="${i}" onclick="toggleDayPill(this)">${lbl}</div>`;
+    return `<div class="day-pill ${active}" data-day="${i}" onclick="toggleDayPill(this)">${DAY_LABELS[i]}</div>`;
   }).join('');
   openModal(`
     <h2>청소자동 설정 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
@@ -668,7 +663,7 @@ function toggleDayPill(el) {
 }
 
 async function saveClean(siteId) {
-  const days = Array.from(document.querySelectorAll('.day-pill.active')).map(el => Number(el.dataset.day)).sort((a,b) => a-b);
+  const days = Array.from(document.querySelectorAll('.day-pill.active')).map(el => Number(el.dataset.day)).sort(daySort);
   const startHour = hhmmToHours(document.getElementById('clStart').value);
   const endHour   = hhmmToHours(document.getElementById('clEnd').value);
   if (startHour == null || endHour == null) return toast('시간 형식 오류');
