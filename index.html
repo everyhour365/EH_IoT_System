@@ -253,6 +253,12 @@ async function api(payload) {
   return res.json();
 }
 
+const _debounceTimers = {};
+function debounce(key, fn, ms = 500) {
+  clearTimeout(_debounceTimers[key]);
+  _debounceTimers[key] = setTimeout(fn, ms);
+}
+
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -542,23 +548,23 @@ async function togglePower(siteId, on) {
   }
 }
 
-async function changeTemp(siteId, delta) {
+function changeTemp(siteId, delta) {
   const site = SITES[siteId];
   const primary = status[site.devices[0].statusKey] || {};
   const current = status.desiredTemp[siteId] ?? primary.targetTemp ?? 25;
   const newTemp = Math.round((current + delta * site.tempStep) * 10) / 10;
   if (newTemp < site.tempMin || newTemp > site.tempMax) return;
-  const prevDesired = status.desiredTemp[siteId];
   status.desiredTemp[siteId] = newTemp;
   document.getElementById('temp-' + siteId).textContent = newTemp + '°C';
-  try {
-    for (const d of site.devices) await api({ action: 'control', device: d.key, temp: newTemp });
-    toast('좌석 O 희망온도 ' + newTemp + '°C 적용');
-  } catch(e) {
-    status.desiredTemp[siteId] = prevDesired;
-    renderAll();
-    toast('온도 변경 실패');
-  }
+  debounce('temp-' + siteId, async () => {
+    const target = status.desiredTemp[siteId];
+    try {
+      for (const d of site.devices) await api({ action: 'control', device: d.key, temp: target });
+      toast('좌석 O 희망온도 ' + target + '°C 적용');
+    } catch(e) {
+      toast('온도 변경 실패');
+    }
+  });
 }
 
 async function changeWind(siteId, wind) {
@@ -589,20 +595,21 @@ async function setTempTriggerOn(siteId, on) {
   }
 }
 
-async function changeTriggerTemp(siteId, delta) {
+function changeTriggerTemp(siteId, delta) {
   const current = status.tempTrigger[siteId].temp;
   const newTemp = current + delta;
   if (newTemp < 20 || newTemp > 35) return;
   status.tempTrigger[siteId].temp = newTemp;
   document.getElementById('ttmp-' + siteId).textContent = newTemp + '°C';
-  try {
-    await api({ action: 'setTempTrigger', site: siteId, temp: newTemp });
-    toast('좌석 X 희망온도 ' + newTemp + '°C 적용');
-  } catch(e) {
-    status.tempTrigger[siteId].temp = current;
-    renderAll();
-    toast('온도 변경 실패');
-  }
+  debounce('ttmp-' + siteId, async () => {
+    const target = status.tempTrigger[siteId].temp;
+    try {
+      await api({ action: 'setTempTrigger', site: siteId, temp: target });
+      toast('좌석 X 희망온도 ' + target + '°C 적용');
+    } catch(e) {
+      toast('온도 변경 실패');
+    }
+  });
 }
 
 async function changeActivationTemp(siteId, delta) {
@@ -634,22 +641,22 @@ async function setCleanAuto(siteId, on) {
   }
 }
 
-async function changeCleanTemp(siteId, delta) {
+function changeCleanTemp(siteId, delta) {
   const cc = status.cleanConfig[siteId];
-  const current = cc.startTemp;
-  const newTemp = current + delta;
+  const newTemp = cc.startTemp + delta;
   if (newTemp < 18 || newTemp > 30) return;
   cc.startTemp = newTemp;
   document.getElementById('ctmp-' + siteId).textContent = newTemp + '°C';
-  try {
-    const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: newTemp });
-    if (r && r.success === false) throw new Error(r.error || '실패');
-    toast('청소 희망온도 ' + newTemp + '°C 적용');
-  } catch(e) {
-    cc.startTemp = current;
-    renderAll();
-    toast('청소온도 변경 실패');
-  }
+  debounce('ctmp-' + siteId, async () => {
+    const target = status.cleanConfig[siteId].startTemp;
+    try {
+      const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: target });
+      if (r && r.success === false) throw new Error(r.error || '실패');
+      toast('청소 희망온도 ' + target + '°C 적용');
+    } catch(e) {
+      toast('청소온도 변경 실패');
+    }
+  });
 }
 
 async function setAutomation(siteId, on) {
