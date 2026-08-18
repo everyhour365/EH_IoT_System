@@ -131,6 +131,15 @@
   .toast.show { opacity: 1; }
   .cfg-btn { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--accent); cursor: pointer; }
   .cfg-btn:active { transform: scale(0.95); }
+  .mode { padding: 12px 14px; border-top: 0.5px solid var(--border-soft); }
+  .mode-top { display: flex; align-items: center; gap: 10px; }
+  .mode-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--text); flex-shrink: 0; }
+  .mode-arrow { font-size: 10px; color: var(--text-sub); cursor: pointer; padding: 4px; margin: -4px; display: inline-flex; transition: transform 0.2s; }
+  .mode-arrow.collapsed { transform: rotate(-90deg); }
+  .mode-hope { flex: 1; font-size: 13px; color: var(--text-sub); margin-left: 6px; }
+  .mode-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .mode-sub-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-sub); }
+  .mode-sub-value { font-size: 13px; color: var(--text-sub); text-align: right; }
   .section-divider { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 0.5px solid var(--border-soft); font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none; }
   .section-divider:active { background: var(--card-sub); }
   .collapse-arrow { transition: transform 0.2s; font-size: 10px; display: inline-block; }
@@ -216,13 +225,24 @@ const WIND_LABELS = { LOW: '약풍', MID: '중풍', HIGH: '강풍' };
 
 let status = {};
 let isLoading = false;
-let collapsed = (() => {
-  try { return JSON.parse(localStorage.getItem('eh_iot_collapsed')) || { seongsu: true, guui: true }; }
-  catch(e) { return { seongsu: true, guui: true }; }
+const DEFAULT_MODES = () => ({
+  seongsu: { seatO: true, seatX: true, clean: true },
+  guui:    { seatO: true, seatX: true, clean: true }
+});
+let collapsedModes = (() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('eh_iot_modes'));
+    const base = DEFAULT_MODES();
+    if (saved) {
+      base.seongsu = Object.assign(base.seongsu, saved.seongsu || {});
+      base.guui    = Object.assign(base.guui,    saved.guui    || {});
+    }
+    return base;
+  } catch(e) { return DEFAULT_MODES(); }
 })();
-function toggleCollapse(siteId) {
-  collapsed[siteId] = !collapsed[siteId];
-  try { localStorage.setItem('eh_iot_collapsed', JSON.stringify(collapsed)); } catch(e) {}
+function toggleMode(siteId, mode) {
+  collapsedModes[siteId][mode] = !collapsedModes[siteId][mode];
+  try { localStorage.setItem('eh_iot_modes', JSON.stringify(collapsedModes)); } catch(e) {}
   renderAll();
 }
 
@@ -242,6 +262,7 @@ function toast(msg) {
 function defaultStatus() {
   return {
     manualControls: { seongsu: 'AUTO', guui: 'AUTO' },
+    automation: { seongsu: true, guui: true },
     tempTrigger: { seongsu: { on: true, temp: 27, activationTemp: 26 }, guui: { on: true, temp: 27, activationTemp: 26 } },
     cleanAuto: { seongsu: false, guui: false },
     nightSms: { seongsu: false, guui: false },
@@ -261,6 +282,7 @@ function mergeStatus(data) {
   const base = defaultStatus();
   return Object.assign(base, data, {
     manualControls: Object.assign(base.manualControls, data.manualControls || {}),
+    automation:     Object.assign(base.automation,     data.automation     || {}),
     tempTrigger:    Object.assign(base.tempTrigger,    data.tempTrigger    || {}),
     cleanAuto:      Object.assign(base.cleanAuto,      data.cleanAuto      || {}),
     nightSms:       Object.assign(base.nightSms,       data.nightSms       || {}),
@@ -397,101 +419,101 @@ function renderDevice(siteId, stale = false) {
         ${seats.longStay > 0 ? `<span class="longstay">⚠ 10시간↑ ${seats.longStay}명</span>` : ''}
       </div>
 
-      ${anyOn ? `
-      <div class="row">
-        <div>
-          <div class="row-label">희망온도</div>
-          ${site.devices.length > 1 ? '<div class="row-sub">2대 동시</div>' : ''}
+      ${(() => {
+        const cm = collapsedModes[siteId] || {};
+        const oh = status.operatingHours[siteId];
+        const tt = status.tempTrigger[siteId];
+        const cc = status.cleanConfig[siteId];
+        return `
+      <!-- 좌석 O -->
+      <div class="mode">
+        <div class="mode-top">
+          <div class="mode-name">좌석 O <span class="mode-arrow ${cm.seatO ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatO')">▼</span></div>
+          <div class="mode-hope">희망온도</div>
+          <div class="temp-btns">
+            <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
+            <div class="temp-display" id="temp-${siteId}">${targetTemp}°C</div>
+            <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
+          </div>
         </div>
-        <div class="temp-btns">
-          <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
-          <div class="temp-display" id="temp-${siteId}">${targetTemp}°C</div>
-          <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
-        </div>
+        ${cm.seatO ? '' : `
+        <div class="mode-sub">
+          <div class="mode-sub-left">좌석 O 때 가동 시간</div>
+          <div class="mode-sub-value">항상 가동</div>
+        </div>`}
       </div>
+
+      <!-- 좌석 X -->
+      <div class="mode">
+        <div class="mode-top">
+          <div class="mode-name">좌석 X <span class="mode-arrow ${cm.seatX ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatX')">▼</span></div>
+          <div class="mode-hope">희망온도</div>
+          <div class="temp-btns">
+            <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
+            <div class="temp-display" id="ttmp-${siteId}">${tt.temp}°C</div>
+            <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
+          </div>
+        </div>
+        ${cm.seatX ? '' : `
+        <div class="mode-sub">
+          <div class="mode-sub-left">
+            <span>온도가동</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" ${tt.on ? 'checked' : ''} onchange="setTempTriggerOn('${siteId}', this.checked)">
+              <span class="toggle-slider blue"></span>
+            </label>
+          </div>
+          <div class="mode-sub-value"></div>
+        </div>
+        <div class="mode-sub">
+          <div class="mode-sub-left">좌석 X 때 가동 시간 <button class="cfg-btn" onclick="openOperatingModal('${siteId}')">설정</button></div>
+          <div class="mode-sub-value">${hoursToHHMM(oh.start)} 시작 · ${hoursToHHMM(oh.stop)} 절전</div>
+        </div>`}
+      </div>
+
+      <!-- 청소 -->
+      <div class="mode">
+        <div class="mode-top">
+          <div class="mode-name">
+            청소
+            <label class="toggle-wrap">
+              <input type="checkbox" ${status.cleanAuto[siteId] ? 'checked' : ''} onchange="setCleanAuto('${siteId}', this.checked)">
+              <span class="toggle-slider blue"></span>
+            </label>
+            <span class="mode-arrow ${cm.clean ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'clean')">▼</span>
+          </div>
+          <div class="mode-hope">희망온도</div>
+          <div class="temp-btns">
+            <button class="temp-btn" onclick="changeCleanTemp('${siteId}', -1)">−</button>
+            <div class="temp-display" id="ctmp-${siteId}">${cc.startTemp}°C</div>
+            <button class="temp-btn" onclick="changeCleanTemp('${siteId}', 1)">+</button>
+          </div>
+        </div>
+        ${cm.clean ? '' : `
+        <div class="mode-sub">
+          <div class="mode-sub-left">청소 가동 <button class="cfg-btn" onclick="openCleanModal('${siteId}')">설정</button></div>
+          <div class="mode-sub-value">${daysLabel(cc.days)} ${hoursToHHMM(cc.startHour)} ~ ${hoursToHHMM(cc.endHour)}</div>
+        </div>`}
+      </div>
+
+      <!-- 바람세기 -->
       <div class="row">
         <div class="row-label">바람세기</div>
         <div class="wind-btns">
           ${site.winds.map(w => `<button class="pill ${primary.windStrength === w ? 'active' : ''}" onclick="changeWind('${siteId}', '${w}')">${WIND_LABELS[w]}</button>`).join('')}
         </div>
       </div>
-      ` : ''}
 
-      <div class="section-divider" onclick="toggleCollapse('${siteId}')">
-        <span>자동화 설정</span>
-        <span class="collapse-arrow ${collapsed[siteId] ? 'collapsed' : ''}">▼</span>
-      </div>
-
-      ${collapsed[siteId] ? '' : `
+      <!-- IoT시스템 -->
       <div class="row">
-        <div class="row-label">자동화</div>
-        <div class="manual-btns">
-          ${['AUTO','ON','OFF'].map(m => {
-            const cur = status.manualControls[siteId];
-            const cls = cur === m ? (m === 'AUTO' ? 'active-auto' : m === 'ON' ? 'active-on' : 'active-off') : '';
-            const label = m === 'AUTO' ? '자동' : m === 'ON' ? '강제ON' : '강제OFF';
-            return `<button class="pill ${cls}" onclick="setManual('${siteId}', '${m}')">${label}</button>`;
-          }).join('')}
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="row-label" style="display: flex; align-items: center; gap: 10px;">
-          <span>온도가동</span>
-          <label class="toggle-wrap">
-            <input type="checkbox" ${status.tempTrigger[siteId].on ? 'checked' : ''} onchange="setTempTriggerOn('${siteId}', this.checked)">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="trigger-temp-btns">
-          <button class="trigger-temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
-          <div class="trigger-temp-display" id="ttmp-${siteId}">${status.tempTrigger[siteId].temp}°C</div>
-          <button class="trigger-temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="row-label">가동온도</div>
-        <div class="trigger-temp-btns">
-          <button class="trigger-temp-btn" onclick="changeActivationTemp('${siteId}', -1)">−</button>
-          <div class="trigger-temp-display" id="atmp-${siteId}">${status.tempTrigger[siteId].activationTemp}°C</div>
-          <button class="trigger-temp-btn" onclick="changeActivationTemp('${siteId}', 1)">+</button>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <div class="row-label">가동시간</div>
-          <div class="row-sub">${hoursToHHMM(status.operatingHours[siteId].start)} 시작 · ${hoursToHHMM(status.operatingHours[siteId].stop)} 절전</div>
-        </div>
-        <button class="cfg-btn" onclick="openOperatingModal('${siteId}')">설정</button>
-      </div>
-
-      <div class="row">
-        <div>
-          <div class="row-label">청소자동</div>
-          <div class="row-sub">${daysLabel(status.cleanConfig[siteId].days)} · ${hoursToHHMM(status.cleanConfig[siteId].startHour)} ${status.cleanConfig[siteId].startTemp}°C → ${hoursToHHMM(status.cleanConfig[siteId].endHour)} ${status.cleanConfig[siteId].endTemp}°C</div>
-        </div>
-        <div class="row-right">
-          <button class="cfg-btn" onclick="openCleanModal('${siteId}')">설정</button>
-          <label class="toggle-wrap">
-            <input type="checkbox" ${status.cleanAuto[siteId] ? 'checked' : ''} onchange="setCleanAuto('${siteId}', this.checked)">
-            <span class="toggle-slider blue"></span>
-          </label>
-        </div>
-      </div>
-
-      <div class="row">
-        <div>
-          <div class="row-label">새벽문자</div>
-          <div class="row-sub">${hoursToHHMM(status.operatingHours[siteId].stop)} 절전 시각에 SMS 발송 후 OFF</div>
-        </div>
+        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">IoT시스템</div>
         <label class="toggle-wrap">
-          <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
+          <input type="checkbox" ${status.automation[siteId] ? 'checked' : ''} onchange="setAutomation('${siteId}', this.checked)">
           <span class="toggle-slider blue"></span>
         </label>
       </div>
-      `}
+      `;
+      })()}
     </div>
   `;
 }
@@ -609,6 +631,37 @@ async function setCleanAuto(siteId, on) {
     toast(on ? '청소자동 켬' : '청소자동 끔');
   } catch(e) {
     status.cleanAuto[siteId] = prev;
+    renderAll();
+    toast('설정 실패: ' + (e.message || ''));
+  }
+}
+
+async function changeCleanTemp(siteId, delta) {
+  const cc = status.cleanConfig[siteId];
+  const current = cc.startTemp;
+  const newTemp = current + delta;
+  if (newTemp < 18 || newTemp > 30) return;
+  cc.startTemp = newTemp;
+  document.getElementById('ctmp-' + siteId).textContent = newTemp + '°C';
+  try {
+    const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: newTemp });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+  } catch(e) {
+    cc.startTemp = current;
+    renderAll();
+    toast('청소온도 변경 실패');
+  }
+}
+
+async function setAutomation(siteId, on) {
+  const prev = status.automation[siteId];
+  status.automation[siteId] = on;
+  try {
+    const r = await api({ action: 'setSetting', site: siteId, key: '자동화', value: on ? 'ON' : 'OFF' });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+    toast(on ? 'IoT 자동화 켬' : 'IoT 자동화 끔');
+  } catch(e) {
+    status.automation[siteId] = prev;
     renderAll();
     toast('설정 실패: ' + (e.message || ''));
   }
