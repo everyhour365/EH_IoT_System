@@ -546,6 +546,7 @@ async function changeTemp(siteId, delta) {
   document.getElementById('temp-' + siteId).textContent = newTemp + '°C';
   try {
     for (const d of site.devices) await api({ action: 'control', device: d.key, temp: newTemp });
+    toast('좌석 O 희망온도 ' + newTemp + '°C 적용');
   } catch(e) {
     site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].targetTemp = prev[i]; });
     renderAll();
@@ -600,6 +601,7 @@ async function changeTriggerTemp(siteId, delta) {
   document.getElementById('ttmp-' + siteId).textContent = newTemp + '°C';
   try {
     await api({ action: 'setTempTrigger', site: siteId, temp: newTemp });
+    toast('좌석 X 희망온도 ' + newTemp + '°C 적용');
   } catch(e) {
     status.tempTrigger[siteId].temp = current;
     renderAll();
@@ -646,6 +648,7 @@ async function changeCleanTemp(siteId, delta) {
   try {
     const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: newTemp });
     if (r && r.success === false) throw new Error(r.error || '실패');
+    toast('청소 희망온도 ' + newTemp + '°C 적용');
   } catch(e) {
     cc.startTemp = current;
     renderAll();
