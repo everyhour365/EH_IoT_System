@@ -468,7 +468,7 @@ function renderDevice(siteId, stale = false) {
         ${cm.seatX ? '' : `
         <div class="mode-sub">
           <div class="mode-sub-left">
-            <span>온도가동</span>
+            <span>빈자리 가동</span>
             <label class="toggle-wrap">
               <input type="checkbox" ${tt.on ? 'checked' : ''} onchange="setTempTriggerOn('${siteId}', this.checked)">
               <span class="toggle-slider blue"></span>
@@ -587,7 +587,7 @@ async function setTempTriggerOn(siteId, on) {
   status.tempTrigger[siteId].on = on;
   try {
     await api({ action: 'setTempTrigger', site: siteId, on: on });
-    toast(on ? '온도가동 켬' : '온도가동 끔');
+    toast(on ? '빈자리 가동 켬' : '빈자리 가동 끔');
   } catch(e) {
     status.tempTrigger[siteId].on = prev;
     renderAll();
@@ -596,8 +596,9 @@ async function setTempTriggerOn(siteId, on) {
 }
 
 function changeTriggerTemp(siteId, delta) {
+  const site = SITES[siteId];
   const current = status.tempTrigger[siteId].temp;
-  const newTemp = current + delta;
+  const newTemp = Math.round((current + delta * site.tempStep) * 10) / 10;
   if (newTemp < 20 || newTemp > 35) return;
   status.tempTrigger[siteId].temp = newTemp;
   document.getElementById('ttmp-' + siteId).textContent = newTemp + '°C';
@@ -642,8 +643,9 @@ async function setCleanAuto(siteId, on) {
 }
 
 function changeCleanTemp(siteId, delta) {
+  const site = SITES[siteId];
   const cc = status.cleanConfig[siteId];
-  const newTemp = cc.startTemp + delta;
+  const newTemp = Math.round((cc.startTemp + delta * site.tempStep) * 10) / 10;
   if (newTemp < 18 || newTemp > 30) return;
   cc.startTemp = newTemp;
   document.getElementById('ctmp-' + siteId).textContent = newTemp + '°C';
