@@ -131,6 +131,8 @@
   .toast.show { opacity: 1; }
   .cfg-btn { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--accent); cursor: pointer; }
   .cfg-btn:active { transform: scale(0.95); }
+  .settings.locked { opacity: 0.4; pointer-events: none; filter: grayscale(0.5); }
+  .lock-note { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-top: 0.5px solid var(--border-soft); font-size: 12px; color: var(--text-sub); background: var(--card-sub); }
   .mode { padding: 12px 14px; border-top: 0.5px solid var(--border-soft); }
   .mode-top { display: flex; align-items: center; gap: 10px; }
   .mode-name { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 600; color: var(--text); flex-shrink: 0; }
@@ -261,8 +263,8 @@ function toast(msg) {
 
 function defaultStatus() {
   return {
-    manualControls: { seongsu: 'AUTO', guui: 'AUTO' },
     automation: { seongsu: true, guui: true },
+    desiredTemp: { seongsu: null, guui: null },
     tempTrigger: { seongsu: { on: true, temp: 27, activationTemp: 26 }, guui: { on: true, temp: 27, activationTemp: 26 } },
     cleanAuto: { seongsu: false, guui: false },
     nightSms: { seongsu: false, guui: false },
@@ -281,8 +283,8 @@ function defaultStatus() {
 function mergeStatus(data) {
   const base = defaultStatus();
   return Object.assign(base, data, {
-    manualControls: Object.assign(base.manualControls, data.manualControls || {}),
     automation:     Object.assign(base.automation,     data.automation     || {}),
+    desiredTemp:    Object.assign(base.desiredTemp,    data.desiredTemp    || {}),
     tempTrigger:    Object.assign(base.tempTrigger,    data.tempTrigger    || {}),
     cleanAuto:      Object.assign(base.cleanAuto,      data.cleanAuto      || {}),
     nightSms:       Object.assign(base.nightSms,       data.nightSms       || {}),
@@ -375,7 +377,7 @@ function renderDevice(siteId, stale = false) {
   const { states, anyOn, primary } = siteState(siteId);
   const seats = status[site.seatKey] || { total: 0, longStay: 0 };
   const seatPct = Math.min(100, Math.round((seats.total / site.seatCap) * 100));
-  const targetTemp = primary.targetTemp ?? '--';
+  const targetTemp = status.desiredTemp[siteId] ?? primary.targetTemp ?? '--';
 
   const miniCards = site.devices.map((d, i) => {
     const s = states[i];
@@ -424,7 +426,10 @@ function renderDevice(siteId, stale = false) {
         const oh = status.operatingHours[siteId];
         const tt = status.tempTrigger[siteId];
         const cc = status.cleanConfig[siteId];
+        const locked = !status.automation[siteId];
         return `
+      ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
+      <div class="settings ${locked ? 'locked' : ''}">
       <!-- 좌석 O -->
       <div class="mode">
         <div class="mode-top">
@@ -503,6 +508,7 @@ function renderDevice(siteId, stale = false) {
           ${site.winds.map(w => `<button class="pill ${primary.windStrength === w ? 'active' : ''}" onclick="changeWind('${siteId}', '${w}')">${WIND_LABELS[w]}</button>`).join('')}
         </div>
       </div>
+      </div><!-- /.settings -->
 
       <!-- IoT시스템 -->
       <div class="row">
@@ -527,6 +533,7 @@ async function togglePower(siteId, on) {
   renderAll();
   try {
     for (const d of site.devices) await api({ action: 'control', device: d.key, power: on });
+    toast(on ? '에어컨 켬' : '에어컨 끔');
     setTimeout(() => loadStatus(), 1500);
   } catch(e) {
     prevStates.forEach(p => { if (status[p.key]) status[p.key].power = p.power; });
@@ -538,17 +545,17 @@ async function togglePower(siteId, on) {
 async function changeTemp(siteId, delta) {
   const site = SITES[siteId];
   const primary = status[site.devices[0].statusKey] || {};
-  const current = primary.targetTemp ?? 25;
+  const current = status.desiredTemp[siteId] ?? primary.targetTemp ?? 25;
   const newTemp = Math.round((current + delta * site.tempStep) * 10) / 10;
   if (newTemp < site.tempMin || newTemp > site.tempMax) return;
-  const prev = site.devices.map(d => status[d.statusKey]?.targetTemp);
-  site.devices.forEach(d => { if (status[d.statusKey]) status[d.statusKey].targetTemp = newTemp; });
+  const prevDesired = status.desiredTemp[siteId];
+  status.desiredTemp[siteId] = newTemp;
   document.getElementById('temp-' + siteId).textContent = newTemp + '°C';
   try {
     for (const d of site.devices) await api({ action: 'control', device: d.key, temp: newTemp });
     toast('좌석 O 희망온도 ' + newTemp + '°C 적용');
   } catch(e) {
-    site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].targetTemp = prev[i]; });
+    status.desiredTemp[siteId] = prevDesired;
     renderAll();
     toast('온도 변경 실패');
   }
@@ -561,23 +568,11 @@ async function changeWind(siteId, wind) {
   renderAll();
   try {
     for (const d of site.devices) await api({ action: 'control', device: d.key, windStrength: wind });
+    toast('바람세기 ' + WIND_LABELS[wind] + ' 적용');
   } catch(e) {
     site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].windStrength = prev[i]; });
     renderAll();
     toast('바람 변경 실패');
-  }
-}
-
-async function setManual(siteId, mode) {
-  const prev = status.manualControls[siteId];
-  status.manualControls[siteId] = mode;
-  renderAll();
-  try {
-    await api({ action: 'setManual', site: siteId, mode: mode });
-  } catch(e) {
-    status.manualControls[siteId] = prev;
-    renderAll();
-    toast('설정 실패');
   }
 }
 
@@ -586,6 +581,7 @@ async function setTempTriggerOn(siteId, on) {
   status.tempTrigger[siteId].on = on;
   try {
     await api({ action: 'setTempTrigger', site: siteId, on: on });
+    toast(on ? '온도가동 켬' : '온도가동 끔');
   } catch(e) {
     status.tempTrigger[siteId].on = prev;
     renderAll();
