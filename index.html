@@ -55,7 +55,7 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overscroll-behavior-y: contain; }
   .pull-indicator { text-align: center; padding: 0; height: 0; overflow: hidden; color: var(--text-sub); font-size: 13px; transition: height 0.2s, padding 0.2s; }
   .pull-indicator.visible { height: 40px; padding: 12px 0; }
-  .header { background: var(--card); padding: 16px 20px 12px; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; }
+  .header { background: var(--card); padding: 16px 26px 12px; border-bottom: 0.5px solid var(--border); position: sticky; top: 0; z-index: 10; }
   .header h1 { font-size: 20px; font-weight: 600; color: var(--text); }
   .status-line { font-size: 12px; color: var(--text-sub); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
   .status-line .dot { color: var(--border); }
@@ -74,6 +74,12 @@
   .device-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 10px; border-bottom: 0.5px solid var(--border-soft); }
   .device-name { font-size: 17px; font-weight: 600; color: var(--text); }
   .device-sub { margin-top: 4px; }
+  .header-ctrls { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .mode-seg { display: inline-flex; border: 1px solid var(--border); border-radius: 20px; overflow: hidden; background: var(--card-sub); }
+  .mode-seg-btn { padding: 7px 12px; font-size: 13px; font-weight: 500; color: var(--text-sub); border: none; background: transparent; cursor: pointer; transition: all 0.15s; }
+  .mode-seg-btn:active { transform: scale(0.95); }
+  .mode-seg-btn.active-cool { background: var(--accent); color: #fff; }
+  .mode-seg-btn.active-heat { background: var(--warn); color: #fff; }
   .power-btn { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 20px; }
   .power-btn.on { background: var(--success); color: #fff; }
   .power-btn.off { background: var(--border); color: var(--text-sub); }
@@ -122,7 +128,7 @@
   .trigger-temp-btn:active { background: var(--warn); color: #fff; transform: scale(0.93); }
   .trigger-temp-display { font-size: 16px; font-weight: 600; color: var(--text); min-width: 44px; text-align: center; }
   .row-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
-  .refresh-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,122,255,0.25); transition: all 0.2s; flex-shrink: 0; }
+  .refresh-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,122,255,0.25); transition: all 0.2s; flex-shrink: 0; }
   .refresh-btn:active { transform: scale(0.93); }
   .stale { opacity: 0.6; }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
@@ -279,8 +285,8 @@ function defaultStatus() {
       guui:    { days: [1,3,5], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 }
     },
     operatingHours: {
-      seongsu: { start: 7, stop: 2 },
-      guui:    { start: 7, stop: 2 }
+      seongsu: { start: 7, stop: 2, emptyOff: 2 },
+      guui:    { start: 7, stop: 2, emptyOff: 2 }
     },
     statusLine: { seongsu: '', guui: '' }
   };
@@ -413,7 +419,13 @@ function renderDevice(siteId, stale = false) {
             </span>
           </div>
         </div>
-        <button class="power-btn ${anyOn ? 'on' : 'off'}" onclick="togglePower('${siteId}', ${!anyOn})">⏻</button>
+        <div class="header-ctrls">
+          <div class="mode-seg">
+            <button class="mode-seg-btn ${primary.mode === 'COOL' ? 'active-cool' : ''}" onclick="changeMode('${siteId}', 'COOL')">냉방</button>
+            <button class="mode-seg-btn ${primary.mode === 'HEAT' ? 'active-heat' : ''}" onclick="changeMode('${siteId}', 'HEAT')">난방</button>
+          </div>
+          <button class="power-btn ${anyOn ? 'on' : 'off'}" onclick="togglePower('${siteId}', ${!anyOn})">⏻</button>
+        </div>
       </div>
 
       <div class="mini-grid ${site.devices.length === 1 ? 'single' : ''}">
@@ -478,7 +490,7 @@ function renderDevice(siteId, stale = false) {
         </div>
         <div class="mode-sub">
           <div class="mode-sub-left">좌석 X 때 가동 시간 <button class="cfg-btn" onclick="openOperatingModal('${siteId}')">설정</button></div>
-          <div class="mode-sub-value">${hoursToHHMM(oh.start)} 시작 · ${hoursToHHMM(oh.stop)} 절전</div>
+          <div class="mode-sub-value">${hoursToHHMM(oh.start)} 시작 · 빈자리 ~${hoursToHHMM(oh.emptyOff ?? oh.stop)} · ${hoursToHHMM(oh.stop)} 절전</div>
         </div>`}
       </div>
 
@@ -579,6 +591,21 @@ async function changeWind(siteId, wind) {
     site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].windStrength = prev[i]; });
     renderAll();
     toast('바람 변경 실패');
+  }
+}
+
+async function changeMode(siteId, mode) {
+  const site = SITES[siteId];
+  const prev = site.devices.map(d => status[d.statusKey]?.mode);
+  site.devices.forEach(d => { if (status[d.statusKey]) status[d.statusKey].mode = mode; });
+  renderAll();
+  try {
+    for (const d of site.devices) await api({ action: 'control', device: d.key, mode: mode });
+    toast(mode === 'COOL' ? '냉방 전환' : mode === 'HEAT' ? '난방 전환' : mode + ' 전환');
+  } catch(e) {
+    site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].mode = prev[i]; });
+    renderAll();
+    toast('모드 변경 실패');
   }
 }
 
@@ -705,7 +732,7 @@ function openOperatingModal(siteId) {
   const oh = status.operatingHours[siteId];
   openModal(`
     <h2>가동시간 설정 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
-    <div class="modal-sub">자동가동 시작·절전 진입 시각</div>
+    <div class="modal-sub">가동 시작 · 빈자리 가동 종료 · 절전 진입 시각</div>
     <div class="modal-row inline">
       <div>
         <div class="modal-row-label">가동 시작</div>
@@ -716,6 +743,10 @@ function openOperatingModal(siteId) {
         <input type="time" class="time-input" id="opStop" value="${hoursToHHMM(oh.stop)}">
       </div>
     </div>
+    <div class="modal-row">
+      <div class="modal-row-label">빈자리 가동 종료 (이후 좌석 0명이면 OFF)</div>
+      <input type="time" class="time-input" id="opEmptyOff" value="${hoursToHHMM(oh.emptyOff ?? oh.stop)}">
+    </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()">취소</button>
       <button class="modal-btn primary" onclick="saveOperating('${siteId}')">저장</button>
@@ -724,17 +755,19 @@ function openOperatingModal(siteId) {
 }
 
 async function saveOperating(siteId) {
-  const start = hhmmToHours(document.getElementById('opStart').value);
-  const stop  = hhmmToHours(document.getElementById('opStop').value);
-  if (start == null || stop == null) return toast('시간 형식 오류');
+  const start    = hhmmToHours(document.getElementById('opStart').value);
+  const stop     = hhmmToHours(document.getElementById('opStop').value);
+  const emptyOff = hhmmToHours(document.getElementById('opEmptyOff').value);
+  if (start == null || stop == null || emptyOff == null) return toast('시간 형식 오류');
   const prev = { ...status.operatingHours[siteId] };
-  status.operatingHours[siteId] = { start, stop };
+  status.operatingHours[siteId] = { start, stop, emptyOff };
   renderAll();
   closeModal();
   try {
     const r1 = await api({ action: 'setSetting', site: siteId, key: '가동_시작시간', value: start });
     const r2 = await api({ action: 'setSetting', site: siteId, key: '절전_시작시간', value: stop });
-    if (r1.success === false || r2.success === false) throw new Error(r1.error || r2.error);
+    const r3 = await api({ action: 'setSetting', site: siteId, key: '빈자리_종료시간', value: emptyOff });
+    if (r1.success === false || r2.success === false || r3.success === false) throw new Error(r1.error || r2.error || r3.error);
     toast('가동시간 저장됨');
   } catch(e) {
     status.operatingHours[siteId] = prev;
