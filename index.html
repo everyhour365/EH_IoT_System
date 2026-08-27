@@ -80,6 +80,8 @@
   .mode-seg-btn:active { transform: scale(0.95); }
   .mode-seg-btn.active-cool { background: var(--accent); color: #fff; }
   .mode-seg-btn.active-heat { background: var(--warn); color: #fff; }
+  .mode-seg.seg-off .mode-seg-btn.active-cool,
+  .mode-seg.seg-off .mode-seg-btn.active-heat { background: var(--border); color: var(--text-sub); }
   .power-btn { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 20px; }
   .power-btn.on { background: var(--success); color: #fff; }
   .power-btn.off { background: var(--border); color: var(--text-sub); }
@@ -420,7 +422,7 @@ function renderDevice(siteId, stale = false) {
           </div>
         </div>
         <div class="header-ctrls">
-          <div class="mode-seg">
+          <div class="mode-seg ${anyOn ? '' : 'seg-off'}">
             <button class="mode-seg-btn ${primary.mode === 'COOL' ? 'active-cool' : ''}" onclick="changeMode('${siteId}', 'COOL')">냉방</button>
             <button class="mode-seg-btn ${primary.mode === 'HEAT' ? 'active-heat' : ''}" onclick="changeMode('${siteId}', 'HEAT')">난방</button>
           </div>
