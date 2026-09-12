@@ -538,6 +538,15 @@ function renderDevice(siteId, stale = false) {
           <span class="toggle-slider blue"></span>
         </label>
       </div>
+
+      <!-- 새벽문자 -->
+      <div class="row">
+        <div class="row-label">새벽문자</div>
+        <label class="toggle-wrap">
+          <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
+          <span class="toggle-slider blue"></span>
+        </label>
+      </div>
       `;
       })()}
     </div>
