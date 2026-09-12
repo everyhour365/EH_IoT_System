@@ -80,8 +80,10 @@
   .mode-seg-btn:active { transform: scale(0.95); }
   .mode-seg-btn.active-cool { background: var(--accent); color: #fff; }
   .mode-seg-btn.active-heat { background: var(--warn); color: #fff; }
+  .mode-seg-btn.active-fan { background: var(--success); color: #fff; }
   .mode-seg.seg-off .mode-seg-btn.active-cool,
-  .mode-seg.seg-off .mode-seg-btn.active-heat { background: var(--border); color: var(--text-sub); }
+  .mode-seg.seg-off .mode-seg-btn.active-heat,
+  .mode-seg.seg-off .mode-seg-btn.active-fan { background: var(--border); color: var(--text-sub); }
   .power-btn { width: 44px; height: 44px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-size: 20px; }
   .power-btn.on { background: var(--success); color: #fff; }
   .power-btn.off { background: var(--border); color: var(--text-sub); }
@@ -425,6 +427,7 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-seg ${anyOn ? '' : 'seg-off'}">
             <button class="mode-seg-btn ${primary.mode === 'COOL' ? 'active-cool' : ''}" onclick="changeMode('${siteId}', 'COOL')">냉방</button>
             <button class="mode-seg-btn ${primary.mode === 'HEAT' ? 'active-heat' : ''}" onclick="changeMode('${siteId}', 'HEAT')">난방</button>
+            <button class="mode-seg-btn ${primary.mode === 'FAN' ? 'active-fan' : ''}" onclick="changeMode('${siteId}', 'FAN')">송풍</button>
           </div>
           <button class="power-btn ${anyOn ? 'on' : 'off'}" onclick="togglePower('${siteId}', ${!anyOn})">⏻</button>
         </div>
@@ -612,7 +615,7 @@ async function changeMode(siteId, mode) {
   renderAll();
   try {
     for (const d of site.devices) await api({ action: 'control', device: d.key, mode: mode });
-    toast(mode === 'COOL' ? '냉방 전환' : mode === 'HEAT' ? '난방 전환' : mode + ' 전환');
+    toast(mode === 'COOL' ? '냉방 전환' : mode === 'HEAT' ? '난방 전환' : mode === 'FAN' ? '송풍 전환' : mode + ' 전환');
   } catch(e) {
     site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].mode = prev[i]; });
     renderAll();
