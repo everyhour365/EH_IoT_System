@@ -544,7 +544,7 @@ function renderDevice(siteId, stale = false) {
 
       <!-- 새벽문자 -->
       <div class="row">
-        <div class="row-label">새벽문자</div>
+        <div class="row-label">절전 알림톡 알림</div>
         <label class="toggle-wrap">
           <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
           <span class="toggle-slider blue"></span>
@@ -722,7 +722,7 @@ async function setNightSms(siteId, on) {
   try {
     const r = await api({ action: 'setNightSms', site: siteId, on: on });
     if (r && r.success === false) throw new Error(r.error || '실패');
-    toast(on ? '새벽문자 켬' : '새벽문자 끔');
+    toast(on ? '절전 알림톡 알림 켬' : '절전 알림톡 알림 끔');
   } catch(e) {
     status.nightSms[siteId] = prev;
     renderAll();
