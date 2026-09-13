@@ -60,6 +60,10 @@
   .status-line { font-size: 12px; color: var(--text-sub); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 8px; }
   .status-line .dot { color: var(--border); }
   .last-update { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+  .weather-widget { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-sub); flex: 1; justify-content: center; }
+  .weather-widget .w-icon { font-size: 22px; line-height: 1; }
+  .weather-widget .w-temp { font-size: 18px; font-weight: 600; color: var(--text); }
+  .weather-widget .w-range { font-size: 11px; color: var(--text-sub); }
   .container { max-width: 1200px; margin: 0 auto; }
   .grid { display: block; }
   @media (min-width: 768px) {
@@ -152,6 +156,8 @@
   .mode-sub { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
   .mode-sub-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-sub); white-space: nowrap; flex-shrink: 0; }
   .mode-sub-value { font-size: 13px; color: var(--text-sub); text-align: right; flex: 1 1 auto; min-width: 0; }
+  .mode-sub.stack { display: block; }
+  .mode-sub.stack .mode-sub-value { display: block; text-align: left; margin-top: 4px; }
   .section-divider { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-top: 0.5px solid var(--border-soft); font-size: 12px; color: var(--text-sub); cursor: pointer; user-select: none; }
   .section-divider:active { background: var(--card-sub); }
   .collapse-arrow { transition: transform 0.2s; font-size: 10px; display: inline-block; }
@@ -188,6 +194,7 @@
       <h1>EH IoT System</h1>
       <div class="last-update" id="lastUpdate"></div>
     </div>
+    <div class="weather-widget" id="weatherWidget"></div>
     <button class="refresh-btn" onclick="loadStatus()" id="refreshBtn" title="새로고침">↻</button>
   </div>
 </div>
@@ -335,9 +342,42 @@ function daysLabel(days) {
   return sorted.map(d => DAY_LABELS[d]).join('/');
 }
 
+function weatherIcon_(code) {
+  if (code === 0) return '☀️';
+  if (code <= 2) return '🌤️';
+  if (code === 3) return '☁️';
+  if (code === 45 || code === 48) return '🌫️';
+  if (code >= 51 && code <= 67) return '🌧️';
+  if (code >= 71 && code <= 77) return '❄️';
+  if (code >= 80 && code <= 82) return '🌦️';
+  if (code >= 95) return '⛈️';
+  return '🌡️';
+}
+
+async function loadWeather() {
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
+      '&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min' +
+      '&timezone=Asia%2FSeoul&forecast_days=1';
+    const res = await fetch(url);
+    const data = await res.json();
+    const temp = Math.round(data.current.temperature_2m);
+    const max = Math.round(data.daily.temperature_2m_max[0]);
+    const min = Math.round(data.daily.temperature_2m_min[0]);
+    const icon = weatherIcon_(data.current.weather_code);
+    document.getElementById('weatherWidget').innerHTML =
+      '<span class="w-icon">' + icon + '</span>' +
+      '<span class="w-temp">' + temp + '°</span>' +
+      '<span class="w-range">최고:' + max + '° 최저:' + min + '°</span>';
+  } catch(e) {
+    document.getElementById('weatherWidget').innerHTML = '';
+  }
+}
+
 async function loadStatus(showStale = false) {
   if (isLoading) return;
   isLoading = true;
+  loadWeather();
   const btn = document.getElementById('refreshBtn');
   btn.innerHTML = '<span class="spinning">↻</span>';
 
@@ -493,7 +533,7 @@ function renderDevice(siteId, stale = false) {
           </div>
           <div class="mode-sub-value"></div>
         </div>
-        <div class="mode-sub">
+        <div class="mode-sub stack">
           <div class="mode-sub-left">좌석 X 때 가동 시간 <button class="cfg-btn" onclick="openOperatingModal('${siteId}')">설정</button></div>
           <div class="mode-sub-value">${hoursToHHMM(oh.start)} 시작 · 빈자리 ~${hoursToHHMM(oh.emptyOff ?? oh.stop)} · ${hoursToHHMM(oh.stop)} 절전</div>
         </div>`}
@@ -518,7 +558,7 @@ function renderDevice(siteId, stale = false) {
           </div>
         </div>
         ${cm.clean ? '' : `
-        <div class="mode-sub">
+        <div class="mode-sub stack">
           <div class="mode-sub-left">청소 가동 <button class="cfg-btn" onclick="openCleanModal('${siteId}')">설정</button></div>
           <div class="mode-sub-value">${daysLabel(cc.days)} ${hoursToHHMM(cc.startHour)} ~ ${hoursToHHMM(cc.endHour)}</div>
         </div>`}
@@ -884,6 +924,7 @@ document.addEventListener('touchend', e => {
 
 status = defaultStatus();
 loadStatus(true);
+loadWeather();
 
 const POLL_MS = 5 * 60 * 1000;
 let pollTimer = null;
