@@ -395,6 +395,7 @@ async function loadStatus(showStale = false) {
 
   try {
     const data = await api({ action: 'getStatus' });
+    if (data && data.error) throw new Error(data.error);
     status = mergeStatus(data);
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, time: Date.now() })); } catch(e) {}
     renderAll(false);
