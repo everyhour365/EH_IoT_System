@@ -292,6 +292,7 @@ function defaultStatus() {
     seatOnGate: { seongsu: { on: false, temp: 28 }, guui: { on: false, temp: 28 } },
     cleanAuto: { seongsu: false, guui: false },
     nightSms: { seongsu: false, guui: false },
+    nightGrace: { seongsu: { grace1: 10, grace2: 10 }, guui: { grace1: 10, grace2: 10 } },
     cleanConfig: {
       seongsu: { days: [], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 },
       guui:    { days: [1,3,5], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 }
@@ -313,6 +314,7 @@ function mergeStatus(data) {
     seatOnGate:     Object.assign(base.seatOnGate,     data.seatOnGate     || {}),
     cleanAuto:      Object.assign(base.cleanAuto,      data.cleanAuto      || {}),
     nightSms:       Object.assign(base.nightSms,       data.nightSms       || {}),
+    nightGrace:     Object.assign(base.nightGrace,     data.nightGrace     || {}),
     cleanConfig:    Object.assign(base.cleanConfig,    data.cleanConfig    || {}),
     operatingHours: Object.assign(base.operatingHours, data.operatingHours || {}),
     statusLine:     Object.assign(base.statusLine,     data.statusLine     || {})
@@ -493,6 +495,7 @@ function renderDevice(siteId, stale = false) {
         const tt = status.tempTrigger[siteId];
         const so = status.seatOnGate[siteId];
         const cc = status.cleanConfig[siteId];
+        const ng = status.nightGrace[siteId];
         const locked = !status.automation[siteId];
         return `
       ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
@@ -587,12 +590,19 @@ function renderDevice(siteId, stale = false) {
       </div>
 
       <!-- 새벽문자 -->
-      <div class="row">
-        <div class="row-label">절전 알림톡 알림</div>
-        <label class="toggle-wrap">
-          <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
-          <span class="toggle-slider blue"></span>
-        </label>
+      <div class="mode">
+        <div class="mode-top">
+          <div class="row-label" style="flex: 1;">절전 알림톡 알림 <span class="mode-arrow ${cm.nightSms ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'nightSms')">▼</span></div>
+          <label class="toggle-wrap">
+            <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
+            <span class="toggle-slider blue"></span>
+          </label>
+        </div>
+        ${cm.nightSms ? '' : `
+        <div class="mode-sub stack">
+          <div class="mode-sub-left">알림 유예시간 <button class="cfg-btn" onclick="openNightGraceModal('${siteId}')">설정</button></div>
+          <div class="mode-sub-value">1차 발송 후 ${ng.grace1}분 무응답 시 2차 재발송 · 2차 후 ${ng.grace2}분 무응답 시 최종 OFF</div>
+        </div>`}
       </div>
       `;
       })()}
@@ -873,6 +883,47 @@ async function saveSeatOnGate(siteId) {
     toast('좌석 O 가동 조건 저장됨');
   } catch(e) {
     status.seatOnGate[siteId] = prev;
+    renderAll();
+    toast('저장 실패: ' + (e.message || ''));
+  }
+}
+
+function openNightGraceModal(siteId) {
+  const ng = status.nightGrace[siteId];
+  openModal(`
+    <h2>절전 알림톡 유예시간 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
+    <div class="modal-sub">1차 알림톡 발송 후 무응답이면 2차(재독촉) 발송, 2차도 무응답이면 최종 OFF 처리됩니다.</div>
+    <div class="modal-row inline">
+      <div>
+        <div class="modal-row-label">1차 발송 후 유예 (분)</div>
+        <input type="number" step="1" min="1" class="time-input" id="ngGrace1" value="${ng.grace1}">
+      </div>
+      <div>
+        <div class="modal-row-label">2차 발송 후 유예 (분)</div>
+        <input type="number" step="1" min="1" class="time-input" id="ngGrace2" value="${ng.grace2}">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveNightGrace('${siteId}')">저장</button>
+    </div>
+  `);
+}
+
+async function saveNightGrace(siteId) {
+  const grace1 = Number(document.getElementById('ngGrace1').value);
+  const grace2 = Number(document.getElementById('ngGrace2').value);
+  if (isNaN(grace1) || grace1 < 1 || isNaN(grace2) || grace2 < 1) return toast('유예시간 오류');
+  const prev = { ...status.nightGrace[siteId] };
+  status.nightGrace[siteId] = { grace1, grace2 };
+  renderAll();
+  closeModal();
+  try {
+    const r = await api({ action: 'setNightGrace', site: siteId, grace1: grace1, grace2: grace2 });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+    toast('알림 유예시간 저장됨');
+  } catch(e) {
+    status.nightGrace[siteId] = prev;
     renderAll();
     toast('저장 실패: ' + (e.message || ''));
   }
