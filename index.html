@@ -292,7 +292,7 @@ function defaultStatus() {
     seatOnGate: { seongsu: { on: false, temp: 28 }, guui: { on: false, temp: 28 } },
     cleanAuto: { seongsu: false, guui: false },
     nightSms: { seongsu: false, guui: false },
-    nightGrace: { seongsu: { graceMin: 10, round2Gap: 3 }, guui: { graceMin: 10, round2Gap: 3 } },
+    nightGrace: { seongsu: { round1: 2, round2: 5 }, guui: { round1: 3, round2: 6 } },
     cleanConfig: {
       seongsu: { days: [], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 },
       guui:    { days: [1,3,5], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 }
@@ -601,7 +601,7 @@ function renderDevice(siteId, stale = false) {
         ${cm.nightSms ? '' : `
         <div class="mode-sub stack">
           <div class="mode-sub-left">알림 유예시간 <button class="cfg-btn" onclick="openNightGraceModal('${siteId}')">설정</button></div>
-          <div class="mode-sub-value">1차 발송 · ${ng.round2Gap}시간 뒤 2차 재확인 발송 (응답대기 ${ng.graceMin}분)</div>
+          <div class="mode-sub-value">1차 ${hoursToHHMM(ng.round1)} · 2차 ${hoursToHHMM(ng.round2)} 재확인 발송</div>
         </div>`}
       </div>
       `;
@@ -891,15 +891,17 @@ async function saveSeatOnGate(siteId) {
 function openNightGraceModal(siteId) {
   const ng = status.nightGrace[siteId];
   openModal(`
-    <h2>절전 알림톡 재확인 설정 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
-    <div class="modal-sub">1차 발송 후 지정 시간 뒤, 그 시점에 좌석을 쓰고 있는 사람 전체에게 2차 재확인 알림톡을 보냅니다 (1차 이후 퇴실처리 없이 나간 유령좌석 방지용).</div>
-    <div class="modal-row">
-      <div class="modal-row-label">1차 → 2차 발송 간격 (시간)</div>
-      <input type="number" step="0.5" min="0.5" class="time-input" id="ngRound2Gap" value="${ng.round2Gap}">
-    </div>
-    <div class="modal-row">
-      <div class="modal-row-label">발송 후 응답 대기시간 (분) — 이 시간 지나도 무응답이면 에어컨 OFF</div>
-      <input type="number" step="1" min="1" class="time-input" id="ngGraceMin" value="${ng.graceMin}">
+    <h2>절전 알림톡 발송시각 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
+    <div class="modal-sub">지정 시각에 그 시점 좌석 이용자 전체에게 알림톡을 보냅니다. 2차는 재독촉이 아니라 1차 이후 퇴실처리 없이 나간 유령좌석을 다시 확인하는 용도입니다.</div>
+    <div class="modal-row inline">
+      <div>
+        <div class="modal-row-label">1차 발송 시각</div>
+        <input type="time" class="time-input" id="ngRound1" value="${hoursToHHMM(ng.round1)}">
+      </div>
+      <div>
+        <div class="modal-row-label">2차 발송 시각</div>
+        <input type="time" class="time-input" id="ngRound2" value="${hoursToHHMM(ng.round2)}">
+      </div>
     </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()">취소</button>
@@ -909,17 +911,17 @@ function openNightGraceModal(siteId) {
 }
 
 async function saveNightGrace(siteId) {
-  const round2Gap = Number(document.getElementById('ngRound2Gap').value);
-  const graceMin = Number(document.getElementById('ngGraceMin').value);
-  if (isNaN(round2Gap) || round2Gap < 0.5 || isNaN(graceMin) || graceMin < 1) return toast('입력값 오류');
+  const round1 = hhmmToHours(document.getElementById('ngRound1').value);
+  const round2 = hhmmToHours(document.getElementById('ngRound2').value);
+  if (round1 == null || round2 == null) return toast('시간 형식 오류');
   const prev = { ...status.nightGrace[siteId] };
-  status.nightGrace[siteId] = { graceMin, round2Gap };
+  status.nightGrace[siteId] = { round1, round2 };
   renderAll();
   closeModal();
   try {
-    const r = await api({ action: 'setNightGrace', site: siteId, graceMin: graceMin, round2Gap: round2Gap });
+    const r = await api({ action: 'setNightGrace', site: siteId, round1: round1, round2: round2 });
     if (r && r.success === false) throw new Error(r.error || '실패');
-    toast('알림 설정 저장됨');
+    toast('발송시각 저장됨');
   } catch(e) {
     status.nightGrace[siteId] = prev;
     renderAll();
