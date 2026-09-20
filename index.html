@@ -116,6 +116,9 @@
   .temp-btns { display: flex; align-items: center; gap: 16px; }
   .temp-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--accent); background: var(--card); color: var(--accent); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
   .temp-btn:active { background: var(--accent); color: #fff; transform: scale(0.93); }
+  .temp-btns.off .temp-btn { border-color: var(--border); color: var(--text-sub); }
+  .temp-btns.off .temp-btn:active { background: var(--border); color: var(--text-sub); }
+  .temp-btns.off .temp-display { color: var(--text-sub); }
   .temp-display { font-size: 20px; font-weight: 600; color: var(--text); min-width: 60px; text-align: center; }
   .wind-btns, .manual-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .pill { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all 0.15s; }
@@ -551,7 +554,7 @@ function renderDevice(siteId, stale = false) {
         <div class="mode-top">
           <div class="mode-name">좌석 X <span class="mode-arrow ${cm.seatX ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatX')">▼</span></div>
           <div class="mode-hope">희망온도</div>
-          <div class="temp-btns">
+          <div class="temp-btns ${tt.on ? '' : 'off'}">
             <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
             <div class="temp-display" id="ttmp-${siteId}">${tt.temp}°C</div>
             <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
@@ -577,24 +580,27 @@ function renderDevice(siteId, stale = false) {
       <!-- 청소 -->
       <div class="mode">
         <div class="mode-top">
-          <div class="mode-name">
-            청소
-            <label class="toggle-wrap">
-              <input type="checkbox" ${status.cleanAuto[siteId] ? 'checked' : ''} onchange="setCleanAuto('${siteId}', this.checked)">
-              <span class="toggle-slider blue"></span>
-            </label>
-            <span class="mode-arrow ${cm.clean ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'clean')">▼</span>
-          </div>
+          <div class="mode-name">청소 <span class="mode-arrow ${cm.clean ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'clean')">▼</span></div>
           <div class="mode-hope">희망온도</div>
-          <div class="temp-btns">
+          <div class="temp-btns ${status.cleanAuto[siteId] ? '' : 'off'}">
             <button class="temp-btn" onclick="changeCleanTemp('${siteId}', -1)">−</button>
             <div class="temp-display" id="ctmp-${siteId}">${cc.startTemp}°C</div>
             <button class="temp-btn" onclick="changeCleanTemp('${siteId}', 1)">+</button>
           </div>
         </div>
         ${cm.clean ? '' : `
+        <div class="mode-sub">
+          <div class="mode-sub-left">
+            <span>청소 자동</span>
+            <label class="toggle-wrap">
+              <input type="checkbox" ${status.cleanAuto[siteId] ? 'checked' : ''} onchange="setCleanAuto('${siteId}', this.checked)">
+              <span class="toggle-slider blue"></span>
+            </label>
+          </div>
+          <div class="mode-sub-value"></div>
+        </div>
         <div class="mode-sub stack">
-          <div class="mode-sub-left">청소 가동 <button class="cfg-btn" onclick="openCleanModal('${siteId}')">설정</button></div>
+          <div class="mode-sub-left">청소 가동 시간 <button class="cfg-btn" onclick="openCleanModal('${siteId}')">설정</button></div>
           <div class="mode-sub-value">${daysLabel(cc.days)} ${hoursToHHMM(cc.startHour)} ~ ${hoursToHHMM(cc.endHour)}</div>
         </div>`}
       </div>
@@ -709,6 +715,7 @@ async function changeMode(siteId, mode) {
 async function setTempTriggerOn(siteId, on) {
   const prev = status.tempTrigger[siteId].on;
   status.tempTrigger[siteId].on = on;
+  renderAll();
   try {
     await api({ action: 'setTempTrigger', site: siteId, on: on });
     toast(on ? '빈자리 가동 켬' : '빈자리 가동 끔');
@@ -755,6 +762,7 @@ async function changeActivationTemp(siteId, delta) {
 async function setCleanAuto(siteId, on) {
   const prev = status.cleanAuto[siteId];
   status.cleanAuto[siteId] = on;
+  renderAll();
   try {
     const r = await api({ action: 'setCleanAuto', site: siteId, on: on });
     if (r && r.success === false) throw new Error(r.error || '실패');
