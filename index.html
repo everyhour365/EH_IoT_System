@@ -522,6 +522,11 @@ function renderDevice(siteId, stale = false) {
         const locked = !status.automation[siteId];
         return `
       ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
+      <!-- 설정 (접기/펴기) -->
+      <div class="row settings-toggle" onclick="toggleMode('${siteId}', 'settingsOpen')">
+        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
+      </div>
+      ${cm.settingsOpen ? `
       <div class="settings ${locked ? 'locked' : ''}">
       <!-- 좌석 O -->
       <div class="mode">
@@ -534,17 +539,7 @@ function renderDevice(siteId, stale = false) {
             <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
           </div>
         </div>
-      </div>
-      </div><!-- /.settings (좌석 O) -->
-
-      <!-- 설정 (접기/펴기) -->
-      <div class="row settings-toggle" onclick="toggleMode('${siteId}', 'settingsOpen')">
-        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
-      </div>
-      ${cm.settingsOpen ? `
-      <div class="settings ${locked ? 'locked' : ''}">
-      <div class="mode">
-        <div class="mode-sub" style="margin-top: 0;">
+        <div class="mode-sub">
           <div class="mode-sub-left">좌석 O 때 가동 조건 <button class="cfg-btn" onclick="openSeatOnGateModal('${siteId}')">설정</button></div>
           <div class="mode-sub-value">${so.on ? '실내온도 ' + so.temp + '°C 이상일 때만 가동' : '항상 가동'}</div>
         </div>
@@ -627,8 +622,6 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-sub-value">1차 ${hoursToHHMM(ng.round1)} · 2차 ${hoursToHHMM(ng.round2)} 재확인 발송</div>
         </div>`}
       </div>
-      ` : ''}
-
       <!-- IoT시스템 -->
       <div class="row">
         <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">IoT시스템</div>
@@ -637,6 +630,8 @@ function renderDevice(siteId, stale = false) {
           <span class="toggle-slider blue"></span>
         </label>
       </div>
+      ` : ''}
+
       `;
       })()}
     </div>
