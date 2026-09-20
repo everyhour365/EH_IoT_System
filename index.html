@@ -531,7 +531,7 @@ function renderDevice(siteId, stale = false) {
       <!-- 좌석 O -->
       <div class="mode">
         <div class="mode-top">
-          <div class="mode-name">좌석 O</div>
+          <div class="mode-name">좌석 O <span class="mode-arrow ${cm.seatO ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatO')">▼</span></div>
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
@@ -539,10 +539,11 @@ function renderDevice(siteId, stale = false) {
             <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
           </div>
         </div>
+        ${cm.seatO ? '' : `
         <div class="mode-sub">
           <div class="mode-sub-left">좌석 O 때 가동 조건 <button class="cfg-btn" onclick="openSeatOnGateModal('${siteId}')">설정</button></div>
           <div class="mode-sub-value">${so.on ? '실내온도 ' + so.temp + '°C 이상일 때만 가동' : '항상 가동'}</div>
-        </div>
+        </div>`}
       </div>
 
       <!-- 좌석 X -->
@@ -600,7 +601,7 @@ function renderDevice(siteId, stale = false) {
 
       <!-- 바람세기 -->
       <div class="row">
-        <div class="row-label">바람세기</div>
+        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">바람세기</div>
         <div class="wind-btns">
           ${site.winds.map(w => `<button class="pill ${primary.windStrength === w ? 'active' : ''}" onclick="changeWind('${siteId}', '${w}')">${WIND_LABELS[w]}</button>`).join('')}
         </div>
@@ -610,7 +611,7 @@ function renderDevice(siteId, stale = false) {
       <!-- 새벽문자 -->
       <div class="mode">
         <div class="mode-top">
-          <div class="row-label" style="flex: 1;">절전 알림톡 알림 <span class="mode-arrow ${cm.nightSms ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'nightSms')">▼</span></div>
+          <div class="row-label" style="flex: 1; font-size: 15px; font-weight: 600; color: var(--text);">절전 알림톡 알림 <span class="mode-arrow ${cm.nightSms ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'nightSms')">▼</span></div>
           <label class="toggle-wrap">
             <input type="checkbox" ${status.nightSms[siteId] ? 'checked' : ''} onchange="setNightSms('${siteId}', this.checked)">
             <span class="toggle-slider blue"></span>
