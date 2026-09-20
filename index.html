@@ -113,13 +113,13 @@
   .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 0.5px solid var(--border-soft); gap: 12px; }
   .row-label { font-size: 13px; color: var(--text-sub); flex-shrink: 0; }
   .row-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
-  .temp-btns { display: flex; align-items: center; gap: 16px; }
+  .temp-btns { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .temp-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--accent); background: var(--card); color: var(--accent); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
   .temp-btn:active { background: var(--accent); color: #fff; transform: scale(0.93); }
   .temp-btns.off .temp-btn { border-color: var(--border); color: var(--text-sub); }
   .temp-btns.off .temp-btn:active { background: var(--border); color: var(--text-sub); }
   .temp-btns.off .temp-display { color: var(--text-sub); }
-  .temp-display { font-size: 20px; font-weight: 600; color: var(--text); min-width: 60px; text-align: center; }
+  .temp-display { font-size: 20px; font-weight: 600; color: var(--text); width: 68px; min-width: 68px; flex-shrink: 0; text-align: center; white-space: nowrap; }
   .wind-btns, .manual-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .pill { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all 0.15s; }
   .pill:active { transform: scale(0.95); }
