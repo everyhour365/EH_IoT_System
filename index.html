@@ -138,7 +138,9 @@
   .row-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
   .refresh-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 6px rgba(0,122,255,0.25); transition: all 0.2s; flex-shrink: 0; }
   .refresh-btn:active { transform: scale(0.93); }
-  .stale { opacity: 0.6; }
+  #content { transition: opacity 0.2s; }
+  #content.refreshing { opacity: 0.55; }
+  .settings-toggle { cursor: pointer; }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
@@ -381,6 +383,7 @@ async function loadWeather() {
 async function loadStatus(showStale = false) {
   if (isLoading) return;
   isLoading = true;
+  document.getElementById('content').classList.add('refreshing');
   loadWeather();
   const btn = document.getElementById('refreshBtn');
   btn.innerHTML = '<span class="spinning">↻</span>';
@@ -410,6 +413,7 @@ async function loadStatus(showStale = false) {
   }
 
   btn.innerHTML = '↻';
+  document.getElementById('content').classList.remove('refreshing');
   isLoading = false;
 }
 
@@ -431,6 +435,25 @@ function siteState(siteId) {
   const anyOn = states.some(s => s.power === 'POWER_ON');
   const primary = states[0] || {};
   return { states, anyOn, primary };
+}
+
+function kstNow_() {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false }).formatToParts(new Date());
+  const get = t => parts.find(x => x.type === t).value;
+  const dow = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[get('weekday')];
+  return { dow, hour: (Number(get('hour')) % 24) + Number(get('minute')) / 60 };
+}
+
+function runLabel(siteId, anyOn) {
+  if (!anyOn) return '정지';
+  const cc = status.cleanConfig[siteId];
+  const now = kstNow_();
+  const inWin = cc.startHour <= cc.endHour
+    ? (now.hour >= cc.startHour && now.hour < cc.endHour)
+    : (now.hour >= cc.startHour || now.hour < cc.endHour);
+  if (status.cleanAuto[siteId] && cc.days.includes(now.dow) && inWin) return '청소 가동중';
+  const seats = status[SITES[siteId].seatKey];
+  return seats && seats.total >= 1 ? '좌석O 가동중' : '좌석X 가동중';
 }
 
 function renderDevice(siteId, stale = false) {
@@ -458,13 +481,13 @@ function renderDevice(siteId, stale = false) {
   }).join('');
 
   return `
-    <div class="card${stale ? ' stale' : ''}" style="margin-bottom: 10px;">
+    <div class="card" style="margin-bottom: 10px;">
       <div class="device-header">
         <div>
           <div class="device-name">${site.name}</div>
           <div class="device-sub">
             <span class="status-badge ${anyOn ? 'status-on' : 'status-off'}">
-              ${anyOn ? '● 가동중' : '○ 정지'}
+              ${anyOn ? '● ' : '○ '}${runLabel(siteId, anyOn)}
             </span>
           </div>
         </div>
@@ -503,7 +526,7 @@ function renderDevice(siteId, stale = false) {
       <!-- 좌석 O -->
       <div class="mode">
         <div class="mode-top">
-          <div class="mode-name">좌석 O <span class="mode-arrow ${cm.seatO ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatO')">▼</span></div>
+          <div class="mode-name">좌석 O</div>
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
@@ -511,11 +534,20 @@ function renderDevice(siteId, stale = false) {
             <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
           </div>
         </div>
-        ${cm.seatO ? '' : `
-        <div class="mode-sub">
+      </div>
+      </div><!-- /.settings (좌석 O) -->
+
+      <!-- 설정 (접기/펴기) -->
+      <div class="row settings-toggle" onclick="toggleMode('${siteId}', 'settingsOpen')">
+        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
+      </div>
+      ${cm.settingsOpen ? `
+      <div class="settings ${locked ? 'locked' : ''}">
+      <div class="mode">
+        <div class="mode-sub" style="margin-top: 0;">
           <div class="mode-sub-left">좌석 O 때 가동 조건 <button class="cfg-btn" onclick="openSeatOnGateModal('${siteId}')">설정</button></div>
           <div class="mode-sub-value">${so.on ? '실내온도 ' + so.temp + '°C 이상일 때만 가동' : '항상 가동'}</div>
-        </div>`}
+        </div>
       </div>
 
       <!-- 좌석 X -->
@@ -580,15 +612,6 @@ function renderDevice(siteId, stale = false) {
       </div>
       </div><!-- /.settings -->
 
-      <!-- IoT시스템 -->
-      <div class="row">
-        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">IoT시스템</div>
-        <label class="toggle-wrap">
-          <input type="checkbox" ${status.automation[siteId] ? 'checked' : ''} onchange="setAutomation('${siteId}', this.checked)">
-          <span class="toggle-slider blue"></span>
-        </label>
-      </div>
-
       <!-- 새벽문자 -->
       <div class="mode">
         <div class="mode-top">
@@ -604,6 +627,16 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-sub-value">1차 ${hoursToHHMM(ng.round1)} · 2차 ${hoursToHHMM(ng.round2)} 재확인 발송</div>
         </div>`}
       </div>
+      ` : ''}
+
+      <!-- IoT시스템 -->
+      <div class="row">
+        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">IoT시스템</div>
+        <label class="toggle-wrap">
+          <input type="checkbox" ${status.automation[siteId] ? 'checked' : ''} onchange="setAutomation('${siteId}', this.checked)">
+          <span class="toggle-slider blue"></span>
+        </label>
+      </div>
       `;
       })()}
     </div>
@@ -618,7 +651,7 @@ async function togglePower(siteId, on) {
   });
   renderAll();
   try {
-    for (const d of site.devices) await api({ action: 'control', device: d.key, power: on });
+    for (const [i, d] of site.devices.entries()) await api({ action: 'control', device: d.key, power: on, silent: i > 0 });
     toast(on ? '에어컨 켬' : '에어컨 끔');
     setTimeout(() => loadStatus(), 1500);
   } catch(e) {
@@ -668,7 +701,7 @@ async function changeMode(siteId, mode) {
   site.devices.forEach(d => { if (status[d.statusKey]) status[d.statusKey].mode = mode; });
   renderAll();
   try {
-    for (const d of site.devices) await api({ action: 'control', device: d.key, mode: mode });
+    for (const [i, d] of site.devices.entries()) await api({ action: 'control', device: d.key, mode: mode, silent: i > 0 });
     toast(mode === 'COOL' ? '냉방 전환' : mode === 'HEAT' ? '난방 전환' : mode === 'FAN' ? '송풍 전환' : mode + ' 전환');
   } catch(e) {
     site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].mode = prev[i]; });
