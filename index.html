@@ -264,8 +264,22 @@ let collapsedModes = (() => {
     return base;
   } catch(e) { return DEFAULT_MODES(); }
 })();
+const SETTINGS_AUTO_COLLAPSE_MS = 60 * 60 * 1000;
+function autoCollapseSettings() {
+  let changed = false;
+  for (const siteId of ['seongsu', 'guui']) {
+    const cm = collapsedModes[siteId];
+    if (!cm.settingsOpen) continue;
+    if (!cm.settingsOpenAt) { cm.settingsOpenAt = Date.now(); continue; }
+    if (Date.now() - cm.settingsOpenAt >= SETTINGS_AUTO_COLLAPSE_MS) { cm.settingsOpen = false; changed = true; }
+  }
+  if (changed) { try { localStorage.setItem('eh_iot_modes', JSON.stringify(collapsedModes)); } catch(e) {} }
+  return changed;
+}
+setInterval(() => { if (autoCollapseSettings()) renderAll(); }, 30 * 1000);
 function toggleMode(siteId, mode) {
   collapsedModes[siteId][mode] = !collapsedModes[siteId][mode];
+  if (mode === 'settingsOpen' && collapsedModes[siteId][mode]) collapsedModes[siteId].settingsOpenAt = Date.now();
   try { localStorage.setItem('eh_iot_modes', JSON.stringify(collapsedModes)); } catch(e) {}
   renderAll();
 }
@@ -526,8 +540,16 @@ function renderDevice(siteId, stale = false) {
         return `
       ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
       <!-- 설정 (접기/펴기) -->
-      <div class="row settings-toggle" onclick="toggleMode('${siteId}', 'settingsOpen')">
-        <div class="row-label" style="font-size: 15px; font-weight: 600; color: var(--text);">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
+      <div class="row">
+        <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1; padding: 6px 0;" onclick="toggleMode('${siteId}', 'settingsOpen')">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
+        ${cm.settingsOpen ? '' : `
+        <div class="settings ${locked ? 'locked' : ''}">
+          <div class="temp-btns">
+            <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
+            <div class="temp-display" id="temp-${siteId}">${targetTemp}°C</div>
+            <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
+          </div>
+        </div>`}
       </div>
       ${cm.settingsOpen ? `
       <div class="settings ${locked ? 'locked' : ''}">
@@ -1059,6 +1081,7 @@ document.addEventListener('touchend', e => {
 });
 
 status = defaultStatus();
+autoCollapseSettings();
 loadStatus(true);
 loadWeather();
 
