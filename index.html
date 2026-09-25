@@ -540,7 +540,7 @@ function renderDevice(siteId, stale = false) {
         return `
       ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
       <!-- 설정 (접기/펴기) -->
-      <div class="row">
+      <div class="row" style="min-height: 58px;">
         <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1; padding: 6px 0;" onclick="toggleMode('${siteId}', 'settingsOpen')">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
         ${cm.settingsOpen ? '' : `
         <div class="settings ${locked ? 'locked' : ''}">
