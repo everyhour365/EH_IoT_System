@@ -648,10 +648,14 @@ function renderDevice(siteId, stale = false) {
         </div>`}
       </div>
       <!-- 가동/절전 시간 -->
-      <div class="mode-sub stack" style="margin: 12px 14px 0;">
-        <div class="mode-sub-left">가동/절전 시간 <button class="cfg-btn" onclick="openOperatingModal('${siteId}')">설정</button></div>
-        <div class="mode-sub-value">${hoursToHHMM(oh.start)} 시작 · 빈자리 ~${hoursToHHMM(oh.emptyOff ?? oh.stop)} · ${hoursToHHMM(oh.stop)} 절전</div>
+      <div class="row" style="padding-top: 14px;" onclick="toggleMode('${siteId}', 'opHours')">
+        <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1;">가동/절전 시간 설정 <span class="mode-arrow ${cm.opHours ? 'collapsed' : ''}">▼</span></div>
       </div>
+      ${cm.opHours ? '' : `
+      <div class="mode-sub stack" style="margin: 0 14px;">
+        <div class="mode-sub-left">가동/절전 시간 <button class="cfg-btn" onclick="event.stopPropagation(); openOperatingModal('${siteId}')">설정</button></div>
+        <div class="mode-sub-value">${hoursToHHMM(oh.start)} 시작 · 빈자리 ~${hoursToHHMM(oh.emptyOff ?? oh.stop)} · ${hoursToHHMM(oh.stop)} 절전</div>
+      </div>`}
 
       <!-- IoT시스템 -->
       <div class="row">
