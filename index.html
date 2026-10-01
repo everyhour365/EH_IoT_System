@@ -119,7 +119,7 @@
   .temp-btns.off .temp-btn { border-color: var(--border); color: var(--text-sub); }
   .temp-btns.off .temp-btn:active { background: var(--border); color: var(--text-sub); }
   .temp-btns.off .temp-display { color: var(--text-sub); }
-  .temp-display { font-size: 20px; font-weight: 600; color: var(--text); width: 68px; min-width: 68px; flex-shrink: 0; text-align: center; white-space: nowrap; }
+  .temp-display { font-size: 20px; font-weight: 600; color: var(--text); width: 68px; min-width: 68px; flex-shrink: 0; text-align: center; white-space: nowrap; cursor: pointer; }
   .wind-btns, .manual-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .pill { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all 0.15s; }
   .pill:active { transform: scale(0.95); }
@@ -546,7 +546,7 @@ function renderDevice(siteId, stale = false) {
         <div class="settings ${locked ? 'locked' : ''}">
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="temp-${siteId}">${targetTemp}°C</div>
+            <div class="temp-display" id="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
             <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
           </div>
         </div>`}
@@ -560,7 +560,7 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="temp-${siteId}">${targetTemp}°C</div>
+            <div class="temp-display" id="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
             <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
           </div>
         </div>
@@ -578,7 +578,7 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns ${tt.on ? '' : 'off'}">
             <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="ttmp-${siteId}">${tt.temp}°C</div>
+            <div class="temp-display" id="ttmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatX')">${tt.temp}°C</div>
             <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
           </div>
         </div>
@@ -602,7 +602,7 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns ${status.cleanAuto[siteId] ? '' : 'off'}">
             <button class="temp-btn" onclick="changeCleanTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="ctmp-${siteId}">${cc.startTemp}°C</div>
+            <div class="temp-display" id="ctmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'clean')">${cc.startTemp}°C</div>
             <button class="temp-btn" onclick="changeCleanTemp('${siteId}', 1)">+</button>
           </div>
         </div>
@@ -688,6 +688,67 @@ async function togglePower(siteId, on) {
     prevStates.forEach(p => { if (status[p.key]) status[p.key].power = p.power; });
     renderAll();
     toast('제어 실패');
+  }
+}
+
+function openTempWheelModal(siteId, kind) {
+  const site = SITES[siteId];
+  let current, min, max, title;
+  if (kind === 'seatO') {
+    const primary = status[site.devices[0].statusKey] || {};
+    current = status.desiredTemp[siteId] ?? primary.targetTemp ?? 25;
+    min = site.tempMin; max = site.tempMax; title = '좌석 O 희망온도';
+  } else if (kind === 'seatX') {
+    current = status.tempTrigger[siteId].temp;
+    min = 20; max = 35; title = '좌석 X 희망온도';
+  } else {
+    current = status.cleanConfig[siteId].startTemp;
+    min = 18; max = 30; title = '청소 희망온도';
+  }
+  openModal(`
+    <h2>${title} · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
+    <div class="modal-row">
+      <select class="time-input" id="twSelect">${numberOptions_(min, max, site.tempStep, current)}</select>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()">취소</button>
+      <button class="modal-btn primary" onclick="saveTempWheel('${siteId}', '${kind}')">저장</button>
+    </div>
+  `);
+}
+
+async function saveTempWheel(siteId, kind) {
+  const val = Number(document.getElementById('twSelect').value);
+  closeModal();
+  const site = SITES[siteId];
+  if (kind === 'seatO') {
+    status.desiredTemp[siteId] = val;
+    renderAll();
+    try {
+      for (const d of site.devices) await api({ action: 'control', device: d.key, temp: val });
+      toast('좌석 O 희망온도 ' + val + '°C 적용');
+    } catch(e) {
+      toast('온도 변경 실패');
+    }
+  } else if (kind === 'seatX') {
+    status.tempTrigger[siteId].temp = val;
+    renderAll();
+    try {
+      await api({ action: 'setTempTrigger', site: siteId, temp: val });
+      toast('좌석 X 희망온도 ' + val + '°C 적용');
+    } catch(e) {
+      toast('온도 변경 실패');
+    }
+  } else {
+    status.cleanConfig[siteId].startTemp = val;
+    renderAll();
+    try {
+      const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: val });
+      if (r && r.success === false) throw new Error(r.error || '실패');
+      toast('청소 희망온도 ' + val + '°C 적용');
+    } catch(e) {
+      toast('청소온도 변경 실패');
+    }
   }
 }
 
