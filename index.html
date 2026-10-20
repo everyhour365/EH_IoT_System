@@ -312,6 +312,7 @@ function defaultStatus() {
     cleanAuto: { seongsu: false, guui: false },
     nightSms: { seongsu: false, guui: false },
     nightGrace: { seongsu: { round1: 2, round2: 5 }, guui: { round1: 3, round2: 6 } },
+    nightRoundOn: { seongsu: { round1: true, round2: true }, guui: { round1: true, round2: true } },
     cleanConfig: {
       seongsu: { days: [], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 },
       guui:    { days: [1,3,5], startHour: 6.333, endHour: 7.333, startTemp: 24, endTemp: 26 }
@@ -334,6 +335,7 @@ function mergeStatus(data) {
     cleanAuto:      Object.assign(base.cleanAuto,      data.cleanAuto      || {}),
     nightSms:       Object.assign(base.nightSms,       data.nightSms       || {}),
     nightGrace:     Object.assign(base.nightGrace,     data.nightGrace     || {}),
+    nightRoundOn:   Object.assign(base.nightRoundOn,   data.nightRoundOn   || {}),
     cleanConfig:    Object.assign(base.cleanConfig,    data.cleanConfig    || {}),
     operatingHours: Object.assign(base.operatingHours, data.operatingHours || {}),
     statusLine:     Object.assign(base.statusLine,     data.statusLine     || {})
@@ -536,6 +538,7 @@ function renderDevice(siteId, stale = false) {
         const so = status.seatOnGate[siteId];
         const cc = status.cleanConfig[siteId];
         const ng = status.nightGrace[siteId];
+        const nr = status.nightRoundOn[siteId];
         const locked = !status.automation[siteId];
         return `
       ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
@@ -644,8 +647,22 @@ function renderDevice(siteId, stale = false) {
         ${cm.nightSms ? '' : `
         <div class="mode-sub stack">
           <div class="mode-sub-left">알림 유예시간 <button class="cfg-btn" onclick="openNightGraceModal('${siteId}')">설정</button></div>
-          <div class="mode-sub-value">1차 ${hoursToHHMM(ng.round1)} · 2차 ${hoursToHHMM(ng.round2)} 재확인 발송</div>
-        </div>`}
+        </div>
+        <div class="mode-sub">
+          <div class="mode-sub-left">1차 발송 ${hoursToHHMM(ng.round1)}</div>
+          <label class="toggle-wrap">
+            <input type="checkbox" ${nr.round1 ? 'checked' : ''} onchange="setNightRound('${siteId}', 1, this.checked)">
+            <span class="toggle-slider blue"></span>
+          </label>
+        </div>
+        <div class="mode-sub">
+          <div class="mode-sub-left">2차 재확인 ${hoursToHHMM(ng.round2)}</div>
+          <label class="toggle-wrap">
+            <input type="checkbox" ${nr.round2 ? 'checked' : ''} onchange="setNightRound('${siteId}', 2, this.checked)">
+            <span class="toggle-slider blue"></span>
+          </label>
+        </div>
+        <div class="mode-sub-value" style="padding: 6px 0 8px; text-align: left;">끄면 오늘 발송만 건너뛰고, 발송 시각이 지나면 자동으로 다시 ON</div>`}
       </div>
       <!-- 가동/절전 시간 -->
       <div class="row" style="padding-top: 14px;" onclick="toggleMode('${siteId}', 'opHours')">
@@ -1020,6 +1037,21 @@ async function saveSeatOnGate(siteId) {
     toast('좌석 O 가동 조건 저장됨');
   } catch(e) {
     status.seatOnGate[siteId] = prev;
+    renderAll();
+    toast('저장 실패: ' + (e.message || ''));
+  }
+}
+
+async function setNightRound(siteId, round, on) {
+  const key = round === 2 ? 'round2' : 'round1';
+  const prev = status.nightRoundOn[siteId][key];
+  status.nightRoundOn[siteId][key] = on;
+  try {
+    const r = await api({ action: 'setNightRound', site: siteId, round: round, on: on });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+    toast(round + '차 알림톡 ' + (on ? 'ON' : 'OFF (오늘만)'));
+  } catch(e) {
+    status.nightRoundOn[siteId][key] = prev;
     renderAll();
     toast('저장 실패: ' + (e.message || ''));
   }
