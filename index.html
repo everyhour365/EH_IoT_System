@@ -94,6 +94,7 @@
   .power-btn:active { transform: scale(0.93); }
   .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
   .status-on { background: var(--success-soft); color: var(--success-text); }
+  .mode-mismatch { display: inline-flex; align-items: center; margin-left: 6px; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; background: var(--danger-soft); color: var(--danger); }
   .status-off { background: var(--border-soft); color: var(--text-sub); }
   .mini-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 8px 14px; }
   .mini-grid.single { grid-template-columns: 1fr; }
@@ -453,7 +454,12 @@ function siteState(siteId) {
   const states = site.devices.map(d => status[d.statusKey] || {});
   const anyOn = states.some(s => s.power === 'POWER_ON');
   const primary = states[0] || {};
-  return { states, anyOn, primary };
+  const MODE_KO = { COOL: '냉방', HEAT: '난방', FAN: '송풍', AIR_DRY: '제습', AUTO: '자동' };
+  const modeSet = [...new Set(states.map(s => s.mode).filter(Boolean))];
+  const mismatchHtml = modeSet.length > 1
+    ? `<span class="mode-mismatch">⚠️ 모드 불일치 · ${site.devices.map((d, i) => d.label + ' ' + (MODE_KO[states[i]?.mode] || states[i]?.mode || '?')).join(' / ')}</span>`
+    : '';
+  return { states, anyOn, primary, mismatchHtml };
 }
 
 function kstNow_() {
@@ -477,7 +483,7 @@ function runLabel(siteId, anyOn) {
 
 function renderDevice(siteId, stale = false) {
   const site = SITES[siteId];
-  const { states, anyOn, primary } = siteState(siteId);
+  const { states, anyOn, primary, mismatchHtml } = siteState(siteId);
   const seats = status[site.seatKey] || { total: 0, longStay: 0 };
   const seatPct = Math.min(100, Math.round((seats.total / site.seatCap) * 100));
   const targetTemp = status.desiredTemp[siteId] ?? primary.targetTemp ?? '--';
@@ -507,7 +513,7 @@ function renderDevice(siteId, stale = false) {
           <div class="device-sub">
             <span class="status-badge ${anyOn ? 'status-on' : 'status-off'}">
               ${anyOn ? '● ' : '○ '}${runLabel(siteId, anyOn)}
-            </span>
+            </span>${mismatchHtml}
           </div>
         </div>
         <div class="header-ctrls">
@@ -809,7 +815,16 @@ async function changeMode(siteId, mode) {
   site.devices.forEach(d => { if (status[d.statusKey]) status[d.statusKey].mode = mode; });
   renderAll();
   try {
-    for (const [i, d] of site.devices.entries()) await api({ action: 'control', device: d.key, mode: mode, silent: i > 0 });
+    const failed = [];
+    for (const [i, d] of site.devices.entries()) {
+      const r = await api({ action: 'control', device: d.key, mode: mode, silent: i > 0 });
+      if (!r || r.success === false) { failed.push(d.label); if (status[d.statusKey]) status[d.statusKey].mode = prev[i]; }
+    }
+    if (failed.length) {
+      renderAll();
+      toast(failed.join('·') + ' 모드 변경 실패 — 리모컨/ThinQ 확인');
+      return;
+    }
     toast(mode === 'COOL' ? '냉방 전환' : mode === 'HEAT' ? '난방 전환' : mode === 'FAN' ? '송풍 전환' : mode + ' 전환');
   } catch(e) {
     site.devices.forEach((d, i) => { if (status[d.statusKey]) status[d.statusKey].mode = prev[i]; });
