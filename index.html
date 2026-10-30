@@ -116,6 +116,13 @@
   .row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-top: 0.5px solid var(--border-soft); gap: 12px; }
   .row-label { font-size: 13px; color: var(--text-sub); flex-shrink: 0; }
   .row-sub { font-size: 11px; color: var(--text-sub); margin-top: 2px; }
+  .view-heat .temp-btn { border-color: var(--warn); color: var(--warn); }
+  .view-heat .temp-btn:active { background: var(--warn); color: #fff; }
+  .view-heat .cfg-btn { color: var(--warn); }
+  .mode-tag { margin-left: 8px; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; vertical-align: middle; }
+  .mode-tag.cool { color: var(--accent); background: var(--accent-soft); }
+  .mode-tag.heat { color: var(--warn); background: var(--warn-soft); }
+  .other-mode-note { margin: 8px 14px 10px; padding: 8px 10px; font-size: 12px; color: var(--text-sub); background: var(--card-sub); border-radius: 10px; }
   .temp-btns { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
   .temp-btn { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--accent); background: var(--card); color: var(--accent); font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
   .temp-btn:active { background: var(--accent); color: #fff; transform: scale(0.93); }
@@ -312,6 +319,10 @@ function defaultStatus() {
     desiredTemp: { seongsu: null, guui: null },
     tempTrigger: { seongsu: { on: true, temp: 27, activationTemp: 26 }, guui: { on: true, temp: 27, activationTemp: 26 } },
     seatOnGate: { seongsu: { on: false, temp: 28 }, guui: { on: false, temp: 28 } },
+    heat: {
+      seongsu: { temp: 22, tempTriggerTemp: 20, cleanTemp: 22, gateOn: true, gateTemp: 21 },
+      guui:    { temp: 22, tempTriggerTemp: 20, cleanTemp: 22, gateOn: true, gateTemp: 21 }
+    },
     cleanAuto: { seongsu: false, guui: false },
     nightSms: { seongsu: false, guui: false },
     nightGrace: { seongsu: { round1: 2, round2: 5 }, guui: { round1: 3, round2: 6 } },
@@ -335,6 +346,7 @@ function mergeStatus(data) {
     desiredTemp:    Object.assign(base.desiredTemp,    data.desiredTemp    || {}),
     tempTrigger:    Object.assign(base.tempTrigger,    data.tempTrigger    || {}),
     seatOnGate:     Object.assign(base.seatOnGate,     data.seatOnGate     || {}),
+    heat:           Object.assign(base.heat,           data.heat           || {}),
     cleanAuto:      Object.assign(base.cleanAuto,      data.cleanAuto      || {}),
     nightSms:       Object.assign(base.nightSms,       data.nightSms       || {}),
     nightGrace:     Object.assign(base.nightGrace,     data.nightGrace     || {}),
@@ -451,12 +463,12 @@ function renderAll(stale = false) {
   `;
 }
 
+const MODE_KO = { COOL: '냉방', HEAT: '난방', FAN: '송풍', AIR_DRY: '제습', AUTO: '자동' };
 function siteState(siteId) {
   const site = SITES[siteId];
   const states = site.devices.map(d => status[d.statusKey] || {});
   const anyOn = states.some(s => s.power === 'POWER_ON');
   const primary = states[0] || {};
-  const MODE_KO = { COOL: '냉방', HEAT: '난방', FAN: '송풍', AIR_DRY: '제습', AUTO: '자동' };
   const modeSet = [...new Set(states.map(s => s.mode).filter(Boolean))];
   const mismatchHtml = modeSet.length > 1
     ? `<span class="mode-mismatch">⚠️ 모드 불일치 · ${site.devices.map((d, i) => d.label + ' ' + (MODE_KO[states[i]?.mode] || states[i]?.mode || '?')).join(' / ')}</span>`
@@ -483,12 +495,94 @@ function runLabel(siteId, anyOn) {
   return seats && seats.total >= 1 ? '좌석O 가동중' : '좌석X 가동중';
 }
 
+// 현재 운전모드(HEAT면 난방 세트, 그 외는 냉방 세트) 기준 설정값 — 성수는 현관 기준
+function curMode(siteId) {
+  const p = status[SITES[siteId].devices[0].statusKey] || {};
+  return p.mode === 'HEAT' ? 'HEAT' : 'COOL';
+}
+function getVal(siteId, kind) {
+  const h = curMode(siteId) === 'HEAT';
+  const hv = status.heat[siteId] || {};
+  if (kind === 'seatO') {
+    if (h) return hv.temp;
+    const p = status[SITES[siteId].devices[0].statusKey] || {};
+    return status.desiredTemp[siteId] ?? p.targetTemp ?? 25;
+  }
+  if (kind === 'seatX') return h ? hv.tempTriggerTemp : status.tempTrigger[siteId].temp;
+  if (kind === 'clean') return h ? hv.cleanTemp : status.cleanConfig[siteId].startTemp;
+  if (kind === 'gateOn') return h ? hv.gateOn : status.seatOnGate[siteId].on;
+  if (kind === 'gateTemp') return h ? hv.gateTemp : status.seatOnGate[siteId].temp;
+}
+function setVal(siteId, kind, v) {
+  const h = curMode(siteId) === 'HEAT';
+  if (h) {
+    const hv = status.heat[siteId];
+    hv[{ seatO: 'temp', seatX: 'tempTriggerTemp', clean: 'cleanTemp', gateOn: 'gateOn', gateTemp: 'gateTemp' }[kind]] = v;
+    return;
+  }
+  if (kind === 'seatO') status.desiredTemp[siteId] = v;
+  else if (kind === 'seatX') status.tempTrigger[siteId].temp = v;
+  else if (kind === 'clean') status.cleanConfig[siteId].startTemp = v;
+  else if (kind === 'gateOn') status.seatOnGate[siteId].on = v;
+  else if (kind === 'gateTemp') status.seatOnGate[siteId].temp = v;
+}
+const TEMP_KIND_KO = { seatO: '좌석 O', seatX: '좌석 X', clean: '청소' };
+function tempRange(siteId, kind) {
+  const site = SITES[siteId];
+  if (curMode(siteId) === 'HEAT') return [16, kind === 'seatO' ? site.tempMax : 30];
+  if (kind === 'seatO') return [site.tempMin, site.tempMax];
+  return kind === 'seatX' ? [20, 35] : [18, 30];
+}
+async function saveTempVal(siteId, kind, v) {
+  const site = SITES[siteId], heat = curMode(siteId) === 'HEAT';
+  if (kind === 'seatO') {
+    for (const d of site.devices) await api({ action: 'control', device: d.key, temp: v, heat });
+  } else if (kind === 'seatX') {
+    await api({ action: 'setTempTrigger', site: siteId, temp: v, heat });
+  } else {
+    const r = await api({ action: 'setSetting', site: siteId, key: heat ? '난방_청소자동_시작온도' : '청소자동_시작온도', value: v });
+    if (r && r.success === false) throw new Error(r.error || '실패');
+  }
+}
+function changeTempVal(siteId, kind, delta) {
+  const site = SITES[siteId];
+  const [mn, mx] = tempRange(siteId, kind);
+  const newTemp = Math.round((getVal(siteId, kind) + delta * site.tempStep) * 10) / 10;
+  if (newTemp < mn || newTemp > mx) return;
+  setVal(siteId, kind, newTemp);
+  const id = { seatO: 'temp-', seatX: 'ttmp-', clean: 'ctmp-' }[kind] + siteId;
+  document.querySelectorAll('[data-tid="' + id + '"]').forEach(el => { el.textContent = newTemp + '°C'; });
+  debounce(id, async () => {
+    const target = getVal(siteId, kind), label = MODE_KO[curMode(siteId)];
+    try {
+      await saveTempVal(siteId, kind, target);
+      toast(TEMP_KIND_KO[kind] + ' ' + label + ' 희망온도 ' + target + '°C 적용');
+    } catch(e) {
+      toast('온도 변경 실패');
+    }
+  });
+}
+
 function renderDevice(siteId, stale = false) {
   const site = SITES[siteId];
   const { states, anyOn, primary, mismatchHtml } = siteState(siteId);
   const seats = status[site.seatKey] || { total: 0, longStay: 0 };
   const seatPct = Math.min(100, Math.round((seats.total / site.seatCap) * 100));
-  const targetTemp = status.desiredTemp[siteId] ?? primary.targetTemp ?? '--';
+  const mode = curMode(siteId);
+  const isHeat = mode === 'HEAT';
+  const otherMode = isHeat ? 'COOL' : 'HEAT';
+  const targetTemp = getVal(siteId, 'seatO') ?? '--';
+  const gateOnV = getVal(siteId, 'gateOn'), gateTempV = getVal(siteId, 'gateTemp');
+  const seatXv = getVal(siteId, 'seatX'), cleanV = getVal(siteId, 'clean');
+  const otherSummary = (() => {
+    if (isHeat) {
+      const p = status[site.devices[0].statusKey] || {};
+      return '좌석 O ' + (status.desiredTemp[siteId] ?? p.targetTemp ?? '--') + ' · 좌석 X ' + status.tempTrigger[siteId].temp + ' · 청소 ' + status.cleanConfig[siteId].startTemp + '°C';
+    }
+    const hv = status.heat[siteId] || {};
+    return '좌석 O ' + hv.temp + ' · 좌석 X ' + hv.tempTriggerTemp + ' · 청소 ' + hv.cleanTemp + '°C';
+  })();
+  const modeTag = `<span class="mode-tag ${isHeat ? 'heat' : 'cool'}">${MODE_KO[mode]} 설정</span>`;
 
   const miniCards = site.devices.map((d, i) => {
     const s = states[i];
@@ -552,33 +646,34 @@ function renderDevice(siteId, stale = false) {
       ${locked ? `<div class="lock-note">🔒 IoT 자동화 OFF · 설정 잠금 (리모컨·ThinQ로 수동 제어)</div>` : ''}
       <!-- 설정 (접기/펴기) -->
       <div class="row" style="min-height: 58px;">
-        <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1; padding: 6px 0;" onclick="toggleMode('${siteId}', 'settingsOpen')">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span></div>
+        <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1; padding: 6px 0;" onclick="toggleMode('${siteId}', 'settingsOpen')">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span>${modeTag}</div>
         ${cm.settingsOpen ? '' : `
-        <div class="settings ${locked ? 'locked' : ''}">
+        <div class="settings ${locked ? 'locked' : ''} ${isHeat ? 'view-heat' : ''}">
           <div class="temp-btns">
-            <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
-            <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', -1)">−</button>
+            <div class="temp-display" data-tid="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', 1)">+</button>
           </div>
         </div>`}
       </div>
       ${cm.settingsOpen ? `
-      <div class="settings ${locked ? 'locked' : ''}">
+      <div class="settings ${locked ? 'locked' : ''} ${isHeat ? 'view-heat' : ''}">
+      ${primary.mode === 'FAN' ? `<div class="other-mode-note" style="margin-top:8px;">송풍은 온도를 맞추지 않아요 · 냉방 설정값을 사용해요</div>` : ''}
       <!-- 좌석 O -->
       <div class="mode">
         <div class="mode-top">
           <div class="mode-name">좌석 O <span class="mode-arrow ${cm.seatO ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatO')">▼</span></div>
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns">
-            <button class="temp-btn" onclick="changeTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
-            <button class="temp-btn" onclick="changeTemp('${siteId}', 1)">+</button>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', -1)">−</button>
+            <div class="temp-display" data-tid="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', 1)">+</button>
           </div>
         </div>
         ${cm.seatO ? '' : `
         <div class="mode-sub">
           <div class="mode-sub-left">좌석 O 때 가동 조건 <button class="cfg-btn" onclick="openSeatOnGateModal('${siteId}')">설정</button></div>
-          <div class="mode-sub-value">${so.on ? '실내온도 ' + so.temp + '°C 이상일 때만 가동' : '항상 가동'}</div>
+          <div class="mode-sub-value">${gateOnV ? '실내온도 ' + gateTempV + '°C ' + (isHeat ? '이하' : '이상') + '일 때만 가동' : '항상 가동'}</div>
         </div>`}
       </div>
 
@@ -588,9 +683,9 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-name">좌석 X <span class="mode-arrow ${cm.seatX ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'seatX')">▼</span></div>
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns ${tt.on ? '' : 'off'}">
-            <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="ttmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatX')">${tt.temp}°C</div>
-            <button class="temp-btn" onclick="changeTriggerTemp('${siteId}', 1)">+</button>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatX', -1)">−</button>
+            <div class="temp-display" data-tid="ttmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatX')">${seatXv}°C</div>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatX', 1)">+</button>
           </div>
         </div>
         ${cm.seatX ? '' : `
@@ -612,9 +707,9 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-name">청소 <span class="mode-arrow ${cm.clean ? 'collapsed' : ''}" onclick="toggleMode('${siteId}', 'clean')">▼</span></div>
           <div class="mode-hope">희망온도</div>
           <div class="temp-btns ${status.cleanAuto[siteId] ? '' : 'off'}">
-            <button class="temp-btn" onclick="changeCleanTemp('${siteId}', -1)">−</button>
-            <div class="temp-display" id="ctmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'clean')">${cc.startTemp}°C</div>
-            <button class="temp-btn" onclick="changeCleanTemp('${siteId}', 1)">+</button>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'clean', -1)">−</button>
+            <div class="temp-display" data-tid="ctmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'clean')">${cleanV}°C</div>
+            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'clean', 1)">+</button>
           </div>
         </div>
         ${cm.clean ? '' : `
@@ -633,6 +728,8 @@ function renderDevice(siteId, stale = false) {
           <div class="mode-sub-value">${daysLabel(cc.days)} ${hoursToHHMM(cc.startHour)} ~ ${hoursToHHMM(cc.endHour)}</div>
         </div>`}
       </div>
+
+      <div class="other-mode-note">${MODE_KO[otherMode]} 설정값 (${otherSummary})은 상단에서 ${MODE_KO[otherMode]}으로 바꾸면 수정할 수 있어요</div>
 
       <!-- 바람세기 -->
       <div class="row">
@@ -718,18 +815,9 @@ async function togglePower(siteId, on) {
 
 function openTempWheelModal(siteId, kind) {
   const site = SITES[siteId];
-  let current, min, max, title;
-  if (kind === 'seatO') {
-    const primary = status[site.devices[0].statusKey] || {};
-    current = status.desiredTemp[siteId] ?? primary.targetTemp ?? 25;
-    min = site.tempMin; max = site.tempMax; title = '좌석 O 희망온도';
-  } else if (kind === 'seatX') {
-    current = status.tempTrigger[siteId].temp;
-    min = 20; max = 35; title = '좌석 X 희망온도';
-  } else {
-    current = status.cleanConfig[siteId].startTemp;
-    min = 18; max = 30; title = '청소 희망온도';
-  }
+  const current = getVal(siteId, kind);
+  const [min, max] = tempRange(siteId, kind);
+  const title = TEMP_KIND_KO[kind] + ' 희망온도 (' + MODE_KO[curMode(siteId)] + ')';
   openModal(`
     <h2>${title} · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
     <div class="modal-row">
@@ -745,55 +833,14 @@ function openTempWheelModal(siteId, kind) {
 async function saveTempWheel(siteId, kind) {
   const val = Number(document.getElementById('twSelect').value);
   closeModal();
-  const site = SITES[siteId];
-  if (kind === 'seatO') {
-    status.desiredTemp[siteId] = val;
-    renderAll();
-    try {
-      for (const d of site.devices) await api({ action: 'control', device: d.key, temp: val });
-      toast('좌석 O 희망온도 ' + val + '°C 적용');
-    } catch(e) {
-      toast('온도 변경 실패');
-    }
-  } else if (kind === 'seatX') {
-    status.tempTrigger[siteId].temp = val;
-    renderAll();
-    try {
-      await api({ action: 'setTempTrigger', site: siteId, temp: val });
-      toast('좌석 X 희망온도 ' + val + '°C 적용');
-    } catch(e) {
-      toast('온도 변경 실패');
-    }
-  } else {
-    status.cleanConfig[siteId].startTemp = val;
-    renderAll();
-    try {
-      const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: val });
-      if (r && r.success === false) throw new Error(r.error || '실패');
-      toast('청소 희망온도 ' + val + '°C 적용');
-    } catch(e) {
-      toast('청소온도 변경 실패');
-    }
+  setVal(siteId, kind, val);
+  renderAll();
+  try {
+    await saveTempVal(siteId, kind, val);
+    toast(TEMP_KIND_KO[kind] + ' ' + MODE_KO[curMode(siteId)] + ' 희망온도 ' + val + '°C 적용');
+  } catch(e) {
+    toast('온도 변경 실패');
   }
-}
-
-function changeTemp(siteId, delta) {
-  const site = SITES[siteId];
-  const primary = status[site.devices[0].statusKey] || {};
-  const current = status.desiredTemp[siteId] ?? primary.targetTemp ?? 25;
-  const newTemp = Math.round((current + delta * site.tempStep) * 10) / 10;
-  if (newTemp < site.tempMin || newTemp > site.tempMax) return;
-  status.desiredTemp[siteId] = newTemp;
-  document.getElementById('temp-' + siteId).textContent = newTemp + '°C';
-  debounce('temp-' + siteId, async () => {
-    const target = status.desiredTemp[siteId];
-    try {
-      for (const d of site.devices) await api({ action: 'control', device: d.key, temp: target });
-      toast('좌석 O 희망온도 ' + target + '°C 적용');
-    } catch(e) {
-      toast('온도 변경 실패');
-    }
-  });
 }
 
 async function changeWind(siteId, wind) {
@@ -849,24 +896,6 @@ async function setTempTriggerOn(siteId, on) {
   }
 }
 
-function changeTriggerTemp(siteId, delta) {
-  const site = SITES[siteId];
-  const current = status.tempTrigger[siteId].temp;
-  const newTemp = Math.round((current + delta * site.tempStep) * 10) / 10;
-  if (newTemp < 20 || newTemp > 35) return;
-  status.tempTrigger[siteId].temp = newTemp;
-  document.getElementById('ttmp-' + siteId).textContent = newTemp + '°C';
-  debounce('ttmp-' + siteId, async () => {
-    const target = status.tempTrigger[siteId].temp;
-    try {
-      await api({ action: 'setTempTrigger', site: siteId, temp: target });
-      toast('좌석 X 희망온도 ' + target + '°C 적용');
-    } catch(e) {
-      toast('온도 변경 실패');
-    }
-  });
-}
-
 async function changeActivationTemp(siteId, delta) {
   const current = status.tempTrigger[siteId].activationTemp;
   const newTemp = current + delta;
@@ -895,25 +924,6 @@ async function setCleanAuto(siteId, on) {
     renderAll();
     toast('설정 실패: ' + (e.message || ''));
   }
-}
-
-function changeCleanTemp(siteId, delta) {
-  const site = SITES[siteId];
-  const cc = status.cleanConfig[siteId];
-  const newTemp = Math.round((cc.startTemp + delta * site.tempStep) * 10) / 10;
-  if (newTemp < 18 || newTemp > 30) return;
-  cc.startTemp = newTemp;
-  document.getElementById('ctmp-' + siteId).textContent = newTemp + '°C';
-  debounce('ctmp-' + siteId, async () => {
-    const target = status.cleanConfig[siteId].startTemp;
-    try {
-      const r = await api({ action: 'setSetting', site: siteId, key: '청소자동_시작온도', value: target });
-      if (r && r.success === false) throw new Error(r.error || '실패');
-      toast('청소 희망온도 ' + target + '°C 적용');
-    } catch(e) {
-      toast('청소온도 변경 실패');
-    }
-  });
 }
 
 async function setAutomation(siteId, on) {
@@ -1016,22 +1026,27 @@ function numberOptions_(min, max, step, selected) {
 }
 
 function openSeatOnGateModal(siteId) {
-  const so = status.seatOnGate[siteId];
+  const heat = curMode(siteId) === 'HEAT';
+  const on = getVal(siteId, 'gateOn'), temp = getVal(siteId, 'gateTemp'), hope = getVal(siteId, 'seatO');
+  const dir = heat ? '이하' : '이상';
   openModal(`
-    <h2>좌석 O 가동 조건 · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
-    <div class="modal-sub">켜면 좌석이 있어도 꺼진 상태에선 실내온도가 기준 이상일 때만 켭니다. 이미 켜져 있으면 계속 유지됩니다.</div>
+    <h2>좌석 O 가동 조건 (${MODE_KO[curMode(siteId)]}) · ${siteId === 'seongsu' ? '성수점' : '구의점'}</h2>
+    <div class="modal-sub">켜면 좌석이 있어도 꺼진 상태에선 실내온도가 기준 ${dir}일 때만 켭니다. 이미 켜져 있으면 계속 유지됩니다.</div>
     <div class="modal-row">
       <div class="modal-row-label" style="display:flex;align-items:center;justify-content:space-between;">
         <span>온도조건 가동</span>
         <label class="toggle-wrap">
-          <input type="checkbox" id="sogOn" ${so.on ? 'checked' : ''}>
+          <input type="checkbox" id="sogOn" ${on ? 'checked' : ''}>
           <span class="toggle-slider blue"></span>
         </label>
       </div>
     </div>
     <div class="modal-row">
-      <div class="modal-row-label">기준온도 (이 온도 이상일 때만 가동)</div>
-      <select class="time-input" id="sogTemp">${numberOptions_(18, 35, 0.5, so.temp)}</select>
+      <div class="modal-row-label">기준온도 (실내가 이 온도 ${dir}일 때만 가동)</div>
+      <select class="time-input" id="sogTemp">${numberOptions_(16, 35, 0.5, temp)}</select>
+      <div class="modal-sub" style="margin-top:8px;">${heat
+        ? '추천: 희망온도(' + hope + '°C)보다 1°C 낮게 · 켜졌다 꺼졌다 반복 방지'
+        : '추천: 희망온도(' + hope + '°C)보다 2°C 이상 높게'}</div>
     </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()">취소</button>
@@ -1043,17 +1058,18 @@ function openSeatOnGateModal(siteId) {
 async function saveSeatOnGate(siteId) {
   const on = document.getElementById('sogOn').checked;
   const temp = Number(document.getElementById('sogTemp').value);
-  if (isNaN(temp) || temp < 18 || temp > 35) return toast('온도 범위 오류');
-  const prev = { ...status.seatOnGate[siteId] };
-  status.seatOnGate[siteId] = { on, temp };
+  if (isNaN(temp) || temp < 16 || temp > 35) return toast('온도 범위 오류');
+  const heat = curMode(siteId) === 'HEAT';
+  const prevOn = getVal(siteId, 'gateOn'), prevTemp = getVal(siteId, 'gateTemp');
+  setVal(siteId, 'gateOn', on); setVal(siteId, 'gateTemp', temp);
   renderAll();
   closeModal();
   try {
-    const r = await api({ action: 'setSeatOnGate', site: siteId, on: on, temp: temp });
+    const r = await api({ action: 'setSeatOnGate', site: siteId, on: on, temp: temp, heat });
     if (r && r.success === false) throw new Error(r.error || '실패');
-    toast('좌석 O 가동 조건 저장됨');
+    toast('좌석 O 가동 조건 (' + MODE_KO[curMode(siteId)] + ') 저장됨');
   } catch(e) {
-    status.seatOnGate[siteId] = prev;
+    setVal(siteId, 'gateOn', prevOn); setVal(siteId, 'gateTemp', prevTemp);
     renderAll();
     toast('저장 실패: ' + (e.message || ''));
   }
