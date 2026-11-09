@@ -156,7 +156,7 @@
   .settings-toggle { cursor: pointer; }
   .spinning { animation: spin 1s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: #fff; padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 100; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; }
   .toast.show { opacity: 1; }
   .cfg-btn { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--accent); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
   .cfg-btn:active { transform: scale(0.95); }
@@ -562,6 +562,10 @@ function changeTempVal(siteId, kind, delta) {
     const target = getVal(siteId, kind), label = MODE_KO[curMode(siteId)];
     try {
       await saveTempVal(siteId, kind, target);
+      if (kind === 'seatO') { // 켜져 있는 장치 카드의 '설정 N°C'도 즉시 반영 (꺼진 장치는 그대로)
+        SITES[siteId].devices.forEach(d => { const st = status[d.statusKey]; if (st && st.power === 'POWER_ON') st.targetTemp = target; });
+        renderAll();
+      }
       toast(TEMP_KIND_KO[kind] + ' ' + label + ' 희망온도 ' + target + '°C 적용');
     } catch(e) {
       toast('온도 변경 실패');
