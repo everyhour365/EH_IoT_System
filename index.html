@@ -396,24 +396,44 @@ function weatherIcon_(code) {
   return '🌡️';
 }
 
-async function loadWeather() {
+function renderWeather_(w) {
+  document.getElementById('weatherWidget').innerHTML =
+    '<span class="w-icon">' + weatherIcon_(w.code) + '</span>' +
+    '<span class="w-temp">' + w.temp + '°</span>' +
+    '<span class="w-range"><span>최고:' + w.max + '°</span><span>최저:' + w.min + '°</span></span>';
+}
+async function fetchWeatherOnce_(timeoutMs) {
+  const url = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
+    '&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min' +
+    '&timezone=Asia%2FSeoul&forecast_days=1';
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), timeoutMs);
   try {
-    const url = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780' +
-      '&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min' +
-      '&timezone=Asia%2FSeoul&forecast_days=1';
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: ctl.signal });
     const data = await res.json();
-    const temp = Math.round(data.current.temperature_2m);
-    const max = Math.round(data.daily.temperature_2m_max[0]);
-    const min = Math.round(data.daily.temperature_2m_min[0]);
-    const icon = weatherIcon_(data.current.weather_code);
-    document.getElementById('weatherWidget').innerHTML =
-      '<span class="w-icon">' + icon + '</span>' +
-      '<span class="w-temp">' + temp + '°</span>' +
-      '<span class="w-range"><span>최고:' + max + '°</span><span>최저:' + min + '°</span></span>';
-  } catch(e) {
-    document.getElementById('weatherWidget').innerHTML = '';
+    return {
+      temp: Math.round(data.current.temperature_2m),
+      max: Math.round(data.daily.temperature_2m_max[0]),
+      min: Math.round(data.daily.temperature_2m_min[0]),
+      code: data.current.weather_code
+    };
+  } finally { clearTimeout(t); }
+}
+// 날씨: 6초 타임아웃 + 1회 재시도, 실패하면 마지막으로 받은 값(3시간 이내)을 대신 표시
+async function loadWeather() {
+  let w = null;
+  for (let i = 0; i < 2 && !w; i++) {
+    try { w = await fetchWeatherOnce_(6000); } catch(e) {}
   }
+  try {
+    if (w) { localStorage.setItem('wxLast', JSON.stringify({ w: w, at: Date.now() })); }
+    else {
+      const c = JSON.parse(localStorage.getItem('wxLast') || 'null');
+      if (c && Date.now() - c.at < 3 * 3600 * 1000) w = c.w;
+    }
+  } catch(e) {}
+  if (w) renderWeather_(w);
+  else document.getElementById('weatherWidget').innerHTML = '';
 }
 
 async function loadStatus(showStale = false) {
