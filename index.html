@@ -685,7 +685,7 @@ function renderDevice(siteId, stale = false) {
       <div class="row" style="min-height: 58px;">
         <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1; padding: 6px 0;" onclick="toggleMode('${siteId}', 'settingsOpen')">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span>${modeTag}</div>
         ${cm.settingsOpen ? '' : `
-        <div class="settings ${locked ? 'locked' : ''} ${isHeat ? 'view-heat' : ''}" style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <div class="settings ${locked ? 'locked' : ''} ${isHeat ? 'view-heat' : ''}" style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-right:9px;">
           <button class="wind-chip" onclick="openWindModal('${siteId}')">${WIND_LABELS[primary.windStrength] || '--'}</button>
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', -1)">−</button>
