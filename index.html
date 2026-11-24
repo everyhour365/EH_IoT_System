@@ -131,6 +131,8 @@
   .temp-btns.off .temp-display { color: var(--text-sub); }
   .temp-display { font-size: 20px; font-weight: 600; color: var(--text); width: 68px; min-width: 68px; flex-shrink: 0; text-align: center; white-space: nowrap; cursor: pointer; }
   .wind-btns, .manual-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .wind-chip { padding: 5px 10px; border-radius: 14px; border: 1px solid var(--border); background: var(--card); font-size: 12px; color: var(--text-sub); cursor: pointer; white-space: nowrap; }
+  .wind-chip:active { transform: scale(0.95); }
   .pill { padding: 6px 14px; border-radius: 20px; border: 1.5px solid var(--border); background: var(--card); font-size: 13px; color: var(--text-sub); cursor: pointer; transition: all 0.15s; }
   .pill:active { transform: scale(0.95); }
   .pill.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
@@ -679,7 +681,8 @@ function renderDevice(siteId, stale = false) {
       <div class="row" style="min-height: 58px;">
         <div class="row-label settings-toggle" style="font-size: 15px; font-weight: 600; color: var(--text); flex: 1; padding: 6px 0;" onclick="toggleMode('${siteId}', 'settingsOpen')">설정 <span class="mode-arrow ${cm.settingsOpen ? '' : 'collapsed'}">▼</span>${modeTag}</div>
         ${cm.settingsOpen ? '' : `
-        <div class="settings ${locked ? 'locked' : ''} ${isHeat ? 'view-heat' : ''}">
+        <div class="settings ${locked ? 'locked' : ''} ${isHeat ? 'view-heat' : ''}" style="display:flex;align-items:center;gap:10px;">
+          <button class="wind-chip" onclick="cycleWind('${siteId}')" title="눌러서 바람세기 변경">💨 ${WIND_LABELS[primary.windStrength] || '--'}</button>
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', -1)">−</button>
             <div class="temp-display" data-tid="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
@@ -876,6 +879,13 @@ async function saveTempWheel(siteId, kind) {
   } catch(e) {
     toast('온도 변경 실패');
   }
+}
+
+function cycleWind(siteId) {
+  const site = SITES[siteId];
+  const cur = (status[site.devices[0].statusKey] || {}).windStrength;
+  const i = site.winds.indexOf(cur);
+  changeWind(siteId, site.winds[(i + 1) % site.winds.length]);
 }
 
 async function changeWind(siteId, wind) {
