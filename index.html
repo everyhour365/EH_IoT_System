@@ -132,10 +132,10 @@
   .temp-display { font-size: 20px; font-weight: 600; color: var(--text); width: 68px; min-width: 68px; flex-shrink: 0; text-align: center; white-space: nowrap; cursor: pointer; }
   .wind-btns, .manual-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .row .settings .temp-btns { gap: 2px; }
-  .row .settings .temp-btn { font-size: 0; padding: 0; position: relative; }
-  .row .settings .temp-btn::before, .row .settings .temp-btn::after { content: ''; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 1px; transform: translate(-50%, -50%); }
-  .row .settings .temp-btn::before { width: 12px; height: 2px; }
-  .row .settings .temp-btn.plus::after { width: 2px; height: 12px; }
+  .temp-btn { font-size: 0; padding: 0; position: relative; }
+  .temp-btn::before, .temp-btn::after { content: ''; position: absolute; left: 50%; top: 50%; background: currentColor; border-radius: 1px; transform: translate(-50%, -50%); }
+  .temp-btn::before { width: 12px; height: 2px; }
+  .temp-btn.plus::after { width: 2px; height: 12px; }
   .row .settings .temp-display { width: 64px; min-width: 64px; font-size: 19px; text-align: center; }
   .row .settings-toggle { white-space: nowrap; flex: 0 1 auto !important; }
   .row .settings-toggle .mode-tag { margin-left: 4px; white-space: nowrap; }
@@ -709,7 +709,7 @@ function renderDevice(siteId, stale = false) {
           <div class="temp-btns">
             <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', -1)">−</button>
             <div class="temp-display" data-tid="temp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatO')">${targetTemp}°C</div>
-            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatO', 1)">+</button>
+            <button class="temp-btn plus" onclick="changeTempVal('${siteId}', 'seatO', 1)">+</button>
           </div>
         </div>
         ${cm.seatO ? '' : `
@@ -727,7 +727,7 @@ function renderDevice(siteId, stale = false) {
           <div class="temp-btns ${tt.on ? '' : 'off'}">
             <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatX', -1)">−</button>
             <div class="temp-display" data-tid="ttmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'seatX')">${seatXv}°C</div>
-            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'seatX', 1)">+</button>
+            <button class="temp-btn plus" onclick="changeTempVal('${siteId}', 'seatX', 1)">+</button>
           </div>
         </div>
         ${cm.seatX ? '' : `
@@ -755,7 +755,7 @@ function renderDevice(siteId, stale = false) {
           <div class="temp-btns ${status.cleanAuto[siteId] ? '' : 'off'}">
             <button class="temp-btn" onclick="changeTempVal('${siteId}', 'clean', -1)">−</button>
             <div class="temp-display" data-tid="ctmp-${siteId}" onclick="openTempWheelModal('${siteId}', 'clean')">${cleanV}°C</div>
-            <button class="temp-btn" onclick="changeTempVal('${siteId}', 'clean', 1)">+</button>
+            <button class="temp-btn plus" onclick="changeTempVal('${siteId}', 'clean', 1)">+</button>
           </div>
         </div>
         ${cm.clean ? '' : `
